@@ -84,6 +84,8 @@ def create_shard(i):
     h5_writer.close()
     print(f"part_{i:05d}_of_{num_shards:05d}.hdf")
 
-with ProcessPoolExecutor(max_workers=50) as executor:
+# NVIDIA's orginal code uses 50 workers, which causes out-of-memory error
+# on P8000. So, max_workers is reduced to 10 in the following line of code.
+with ProcessPoolExecutor(max_workers=10) as executor:
     for partial_result in executor.map(create_shard, list(range(num_shards))):
         pass
