@@ -1,12 +1,12 @@
 #!/bin/bash
 
 python -m torch.distributed.launch --nproc_per_node=8 \
-    -u /workspace/bert/run_pretraining.py \
+    /workspace/bert/run_pretraining.py \
     --seed=42 \
     --do_train \
-    --target_accuracy=0.714 \
-    --accuracy_score_averaging=1 \
-    --config_file=/workspace/phase1/bert_config.json \
+    --train_mlm_accuracy_window_size=0 \
+    --target_mlm_accuracy=0.714 \
+    --bert_config_path=/workspace/bert_data/phase1/bert_config.json \
     --skip_checkpoint \
     --output_dir=/results \
     --fp16 \
@@ -21,5 +21,4 @@ python -m torch.distributed.launch --nproc_per_node=8 \
     --max_seq_length=512 \
     --max_predictions_per_seq=76 \
     --max_steps=100 \
-    --init_checkpoint=/workspace/phase1/model.ckpt-28252 \
-
+    --init_checkpoint=/workspace/bert_data/phase1/model.ckpt-28252.pt
