@@ -1,5 +1,5 @@
 # progress bars in model download and training scripts
-numpy==1.16.4
+numpy==1.26.4
 jax==0.5.3
 boto3==1.14.0
 gdown==4.4.0
