@@ -29,7 +29,6 @@ RUN apt-get update \
 WORKDIR /workspace/bert
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-RUN pip install --upgrade jax==0.5.3
 
 # Preprocessing
 WORKDIR /workspace
@@ -47,5 +46,7 @@ RUN cd /workspace/bert/mhalib && python setup.py build && cp build/lib*/mhalib* 
 
 # Install TE
 RUN MAX_JOBS=1 pip install git+https://github.com/NVIDIA/TransformerEngine.git@b8ba734
+
+RUN pip install --upgrade jax==0.5.3
 
 WORKDIR /workspace/bert
