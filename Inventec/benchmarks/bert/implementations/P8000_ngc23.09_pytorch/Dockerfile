@@ -29,6 +29,7 @@ RUN apt-get update \
 WORKDIR /workspace/bert
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --upgrade jax==0.5.3
 
 # Preprocessing
 WORKDIR /workspace
