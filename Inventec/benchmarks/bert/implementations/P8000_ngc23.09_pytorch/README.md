@@ -22,6 +22,7 @@ Single GPU server case
 
   - NFS mounted on the compute node: `/mnt` on "compute-h100-1"
   - Data (training data, checkpoints) in /mnt/mlperf/bert_data
+  - Docker container file in /mnt/sqsh
   - Source code in /mnt/jkjung/training_results_v5.0/Inventec/benchmarks/bert/implementations/P8000_ngc23.09_pytorch
 
 Multiple GPU server case (TO-DO)
@@ -35,15 +36,15 @@ Step-by-step
 1. Clone this repository.  You might want to replace `/mnt/jkjung` with your own directory.
 
    ```shell
-   root@compute-h100-1:~# cd /mnt/jkjung
-   root@compute-h100-1:/mnt/jkjung# git clone https://github.com/jkjung-avt/training_results_v5.0.git
+   cd /mnt/jkjung
+   git clone https://github.com/jkjung-avt/training_results_v5.0.git
    ```
 
 2. Builder the container.  You will have to use your NGC API key to pull the base pytorch docker image, e.g. `docker login nvcr.io` or use `~/.config/enroot/.credentials`.  Note that the docker image name "bert_ngc23.09_pyt" is different from that in NVIDIA's original inmplementation.
 
    ```shell
-   root@compute-h100-1:/mnt/jkjung# cd training_results_v5.0/Inventec/benchmarks/bert/implementations/P8000_ngc23.09_pytorch/
-   root@compute-h100-1:/mnt/jkjung/training_results_v5.0/Inventec/benchmarks/bert/implementations/P8000_ngc23.09_pytorch# docker build --pull -t mlperf-nvidia:bert_ngc23.09_pyt .
+   cd training_results_v5.0/Inventec/benchmarks/bert/implementations/P8000_ngc23.09_pytorch/
+   docker build --pull -t mlperf-nvidia:bert_ngc23.09_pyt .
    ```
 
 3. Prepare dataset.  You could refer to [README-NVIDIA.md](README-NVIDIA.md) for more details about the `prepare_data.sh` script.
@@ -51,7 +52,7 @@ Step-by-step
    Start the container with the following command.  Note that the container (without the `--rm` flag) is not removed automatically.  You'll need to do `docker rm <CONTAINER ID>` manually.
 
    ```bash
-   root@compute-h100-1:/mnt/jkjung/training_results_v5.0/Inventec/benchmarks/bert/implementations/P8000_ngc23.09_pytorch# docker run -it --gpus=all --runtime=nvidia --ipc=host -v /mnt/mlperf/bert_data:/workspace/bert_data mlperf-nvidia:bert_ngc23.09_pyt
+   docker run -it --gpus=all --runtime=nvidia --ipc=host -v /mnt/mlperf/bert_data:/workspace/bert_data mlperf-nvidia:bert_ngc23.09_pyt
    ```
 
    Then run within the container:
@@ -92,7 +93,13 @@ Step-by-step
        └── vocab.txt
    ```
 
-4. TODO: Launch training.
+4. Create the SquashFS file from the "bert_ngc23.09_pyt" docker image.  The created `/mnt/sqsh/bert_ngc23.09_pyt.sqsh` file is needed for slurm.
+
+   ```bash
+   enroot import -o /mnt/sqsh/bert_ngc23.09_pyt.sqsh dockerd://mlperf-nvidia:bert_ngc23.09_pyt
+   ```
+
+5. TODO: Launch training.
 
    Navigate to the directory where `run.sub` is stored.
 
