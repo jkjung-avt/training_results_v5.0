@@ -429,6 +429,10 @@ def parse_arguments():
                         type=int,
                         default=os.getenv('LOCAL_RANK', 0),
                         help="local_rank for distributed training on gpus")
+    parser.add_argument("--local_rank",
+                        type=int,
+                        default=os.getenv('LOCAL_RANK', 0),
+                        help="local_rank for distributed training on gpus")
     parser.add_argument('--seed',
                         type=int,
                         default=42,
