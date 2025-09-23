@@ -6,3 +6,4 @@ export LOGDIR=${PWD}/results
 export CONT=mlperf-nvidia:bert_ngc23.09_pyt
 export CONT_FILE="/mnt/sqsh/bert_ngc23.09_pyt.sqsh"
 export SLURM_MPI_TYPE=pmi2
+export NEXP=1   # Number of experiments (training runs)
