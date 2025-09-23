@@ -106,8 +106,8 @@ Step-by-step
 
    ```bash
    source env.sh
-   source config_DGXH100_1x8x48x1_pack.sh
-   sbatch -w compute-h100-1 --time=${WALLTIME} run.sub  # you may be required to set --account and --partition here
+   source config_P8000H100_1x8x48x1_pack.sh
+   sbatch -w compute-h100-1 --time=${WALLTIME} run.sub
    ```
 
    Note:
