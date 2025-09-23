@@ -33,21 +33,21 @@ Multiple GPU server case (TO-DO)
 Step-by-step
 ------------
 
-1. Clone this repository.  You might want to replace `/mnt/jkjung` with your own directory.
+1. Clone this repository on the compute node ("compute-h100-1").  You might want to replace `/mnt/jkjung` with your own directory.
 
    ```shell
    cd /mnt/jkjung
    git clone https://github.com/jkjung-avt/training_results_v5.0.git
    ```
 
-2. Builder the container.  You will have to use your NGC API key to pull the base pytorch docker image, e.g. `docker login nvcr.io` or use `~/.config/enroot/.credentials`.  Note that the docker image name "bert_ngc23.09_pyt" is different from that in NVIDIA's original inmplementation.
+2. Builder the container on the compute node ("compute-h100-1").  You will have to use your NGC API key to pull the base pytorch docker image, e.g. `docker login nvcr.io` or use `~/.config/enroot/.credentials`.  Note that the docker image name "bert_ngc23.09_pyt" is different from that in NVIDIA's original inmplementation.
 
    ```shell
    cd training_results_v5.0/Inventec/benchmarks/bert/implementations/P8000_ngc23.09_pytorch/
    docker build --pull -t mlperf-nvidia:bert_ngc23.09_pyt .
    ```
 
-3. Prepare dataset.  You could refer to [README-NVIDIA.md](README-NVIDIA.md) for more details about the `prepare_data.sh` script.
+3. Prepare dataset on the compute node ("compute-h100-1").  You could refer to [README-NVIDIA.md](README-NVIDIA.md) for more details about the `prepare_data.sh` script.
 
    Start the container with the following command.  Note that the container (without the `--rm` flag) is not removed automatically.  You'll need to do `docker rm <CONTAINER ID>` manually.
 
@@ -62,7 +62,9 @@ Step-by-step
    ./input_preprocessing/prepare_data.sh --outputdir /workspace/bert_data --packed-data
    ```
 
-   This script may take around 24 hours to complete.  Once the script finishes running, you should verify `bert_data` has been correctly generated as follows.  Pay special attention to `phase1/model.ckpt-28252.pt` (PyTorch checkpoint file converted from the original TensorFlow v1 checkpoint) which is generated in the last step of the `prepare_data.sh` script.
+   This script may take around 12 hours to complete.  If you have already downloaded the files but would like to re-create the training data, you could add `--skip-download` option to the `prepare_data.sh` script.  That would save both network bandwidth and time.
+
+   Once the script finishes running, you should verify `bert_data` has been correctly generated as follows.  Pay special attention to `phase1/model.ckpt-28252.pt` (PyTorch checkpoint file converted from the original TensorFlow v1 checkpoint) which is generated in the last step of the `prepare_data.sh` script.
 
    ```
    /workspace/bert_data/
@@ -93,25 +95,22 @@ Step-by-step
        └── vocab.txt
    ```
 
-4. Create the SquashFS file from the "bert_ngc23.09_pyt" docker image.  The created `/mnt/sqsh/bert_ngc23.09_pyt.sqsh` file is needed for slurm.
+4. Create the SquashFS file from the "bert_ngc23.09_pyt" docker image on the compute node ("compute-h100-1").  The created `/mnt/sqsh/bert_ngc23.09_pyt.sqsh` file is needed for slurm.
 
    ```bash
    enroot import -o /mnt/sqsh/bert_ngc23.09_pyt.sqsh dockerd://mlperf-nvidia:bert_ngc23.09_pyt
    ```
 
-5. TODO: Launch training.
-
-   Navigate to the directory where `run.sub` is stored.
-
-   The launch command structure:
+5. Launch training on the *head* node ("head-p8000-1").  Navigate to the directory where `run.sub` is stored.
 
    ```bash
-   export EVALDIR="/path/to/your/data/hdf5/eval_varlength"
-   export DATADIR_PHASE2="/path/to/your/data/hdf5/training-4320/hdf5_4320_shards_varlength_shuffled"
-   export DATADIR_PHASE2_PACKED="/path/to/your/data/packed_data"
-   export CHECKPOINTDIR_PHASE1="/path/to/your/data/phase1"
-   export LOGDIR=</path/to/output/dir> # set the place where the output logs will be saved
-   export CONT=<docker/registry>/mlperf-nvidia:language_model-pyt
-   source config_DGXH100_1x8x48x1_pack.sh  # select config and source it
-   sbatch -N ${DGXNNODES} --time=${WALLTIME} run.sub  # you may be required to set --account and --partition here
+   source env.sh
+   source config_DGXH100_1x8x48x1_pack.sh
+   sbatch -w compute-h100-1 --time=${WALLTIME} run.sub  # you may be required to set --account and --partition here
    ```
+
+   Note:
+
+   * Rename "compute-h100-1" in the 3rd command if you are using a different slurm compute node.
+   * It's a good idea to verify that there is no process hogging the CPUs/GPUs/memory on the compute node.  For example, do `docker ps -a` and `docker rm <CONTAINER ID>` to remove all running/pending containers.
+   * You could adjust experiment setting in the `env.sh` script.
