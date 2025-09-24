@@ -45,7 +45,7 @@ Step-by-step
 
    ```shell
    cd training_results_v5.0/Inventec/benchmarks/bert/implementations/P8000_ngc23.09_pytorch/
-   docker build --pull -t mlperf-nvidia:bert_ngc23.09_pyt .
+   docker build --pull -t mlperf-nvidia:bert_ngc25.04_pyt .
    ```
 
 3. Prepare dataset on the compute node ("compute-h100-1").  You could refer to [README-NVIDIA.md](README-NVIDIA.md) for more details about the `prepare_data.sh` script.
@@ -53,7 +53,7 @@ Step-by-step
    Start the container with the following command.  Note that the container (without the `--rm` flag) is not removed automatically.  You'll need to do `docker rm <CONTAINER ID>` manually.
 
    ```bash
-   docker run -it --gpus=all --runtime=nvidia --ipc=host -v /mnt/mlperf/bert_data:/workspace/bert_data mlperf-nvidia:bert_ngc23.09_pyt
+   docker run -it --gpus=all --runtime=nvidia --ipc=host -v /mnt/mlperf/bert_data:/workspace/bert_data mlperf-nvidia:bert_ngc25.04_pyt
    ```
 
    Then run within the container:
@@ -99,7 +99,7 @@ Step-by-step
 4. Create the SquashFS file from the docker image on the compute node ("compute-h100-1").  The created `/mnt/sqsh/bert_ngc23.09_pyt.sqsh` file is needed for running the experiment with slurm.
 
    ```bash
-   enroot import -o /mnt/sqsh/bert_ngc23.09_pyt.sqsh dockerd://mlperf-nvidia:bert_ngc23.09_pyt
+   enroot import -o /mnt/sqsh/bert_ngc25.04_pyt.sqsh dockerd://mlperf-nvidia:bert_ngc25.04_pyt
    ```
 
 5. Launch training with slurm on the *head* node ("head-p8000-1").  Navigate to the directory where `run.sub` is stored and execute the following.

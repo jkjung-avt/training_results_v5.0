@@ -435,6 +435,10 @@ def parse_arguments():
                         default=0,
                         type=float,
                         help="Starting step for warmup. ")
+    parser.add_argument("--local-rank",
+                        type=int,
+                        default=os.getenv('LOCAL_RANK', 0),
+                        help="local_rank for distributed training on gpus")
     parser.add_argument("--local_rank",
                         type=int,
                         default=os.getenv('LOCAL_RANK', 0),
