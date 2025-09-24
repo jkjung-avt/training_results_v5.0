@@ -114,7 +114,7 @@ PYXIS_DEFAULTS=( '--no-container-mount-home' '--container-remap-root' '--contain
 
 # pyxis sometimes leaves containers lying around which can really confuse things:
 cleanup_pyxis() {
-    srun --ntasks-per-node=1 /bin/bash -c 'if [[ "$(enroot list)" ]]; then enroot remove -f $(enroot list); fi'
+    srun --ntasks-per-node=1 --gres=gpu:8 /bin/bash -c 'if [[ "$(enroot list)" ]]; then enroot remove -f $(enroot list); fi'
 }
 cleanup_pyxis
 
@@ -182,22 +182,22 @@ source ${RUNSUB_DIR}/config_mounts.sh
 
 # Setup container
 echo MELLANOX_VISIBLE_DEVICES="${MELLANOX_VISIBLE_DEVICES:-}"
-srun --ntasks-per-node=1 --container-image="${CONT}" --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" true
-srun -N1 -n1 --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" ibv_devinfo --list
-srun -N1 -n1 --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" nvidia-smi topo -m
+srun --ntasks-per-node=1 --container-image="${CONT}" --container-name="${_cont_name}" --gres=gpu:8 "${PYXIS_DEFAULTS[@]}" true
+srun -N1 -n1 --container-name="${_cont_name}" --gres=gpu:8 "${PYXIS_DEFAULTS[@]}" ibv_devinfo --list
+srun -N1 -n1 --container-name="${_cont_name}" --gres=gpu:8 "${PYXIS_DEFAULTS[@]}" nvidia-smi topo -m
 
 set +e
 # Check vbios version and fabric integrity
-srun --ntasks-per-node=1 nvidia-smi --query-gpu=gpu_name,gpu_bus_id,vbios_version --format=csv
-srun -l --ntasks-per-node=1 bash -c "nvidia-smi -q | grep Fabric -A 4 | grep CliqueId"
+srun --ntasks-per-node=1 --gres=gpu:8 nvidia-smi --query-gpu=gpu_name,gpu_bus_id,vbios_version --format=csv
+srun -l --ntasks-per-node=1 --gres=gpu:8 bash -c "nvidia-smi -q | grep Fabric -A 4 | grep CliqueId"
 set -e
 
 echo "NCCL_TEST = ${NCCL_TEST}"
 if [[ ${NCCL_TEST} -eq 1 ]]; then
     set +e
     echo "NCCL_TEST_START $(date +%s)"
-    (srun --mpi="${SLURM_MPI_TYPE:-pmix}"  --ntasks-per-node="${DGXNGPU}" \
-     --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" --time="${NCCL_TEST_WALLTIME}" all_reduce_perf_mpi -b 21M -e 672M -d half -G 1 -f 2
+    (srun --mpi="${SLURM_MPI_TYPE:-pmix}" --ntasks-per-node="${DGXNGPU}" \
+     --container-name="${_cont_name}" --gres=gpu:8 "${PYXIS_DEFAULTS[@]}" --time="${NCCL_TEST_WALLTIME}" all_reduce_perf_mpi -b 21M -e 672M -d half -G 1 -f 2
     ) |& tee "${LOGDIR}/${SPREFIX}_nccl.log"
     echo "NCCL_TEST_STOP $(date +%s)"
     set -e
@@ -205,46 +205,46 @@ if [[ ${NCCL_TEST} -eq 1 ]]; then
 fi
 
 if [[ "${GET_MOUNT_INFO:-0}" -eq 1 ]]; then
-    (srun -N1 -n1 --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" \
+    (srun -N1 -n1 --container-name="${_cont_name}" --gres=gpu:8 "${PYXIS_DEFAULTS[@]}" \
         --container-mounts="${_cont_mounts}"  \
         python3 -c "from mlperf_common.mountcheck import main; main(${cont_mounts_to_verify})"
     ) |& tee "${LOGDIR}/cont-mount-info.json"
 fi
 
 if [[ "${VERIFY_MOUNT:-0}" -eq 1 ]]; then
-    (srun --ntasks-per-node=1 --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" \
+    (srun --ntasks-per-node=1 --container-name="${_cont_name}" --gres=gpu:8 "${PYXIS_DEFAULTS[@]}" \
         --container-mounts="${_cont_mounts}"  \
         python3 -c "from mlperf_common.mountcheck import main; main('cont-mount-info.json', check=True)"
     ) |& tee "${LOGDIR}/${SPREFIX}_mountcheck.log"
 fi
 
 #GPU power measurements
-if [ -f "$POWERCMDDIR/power_monitor.sh"  ]; then
+if [ -f "$POWERCMDDIR/power_monitor.sh" ]; then
     ( umask 0002; mkdir -p "${POWERLOGDIR}" )
     # Measure GPU power on up to 64 nodes.
     if [ ${SLURM_JOB_NUM_NODES} -gt 64 ]; then
-    	( srun --overlap --ntasks=64 bash $POWERCMDDIR/power_monitor.sh ) &
+        (srun --overlap --ntasks=64 --gres=gpu:8 bash $POWERCMDDIR/power_monitor.sh) &
     else
-	( srun --overlap --ntasks-per-node=1 bash $POWERCMDDIR/power_monitor.sh ) &
+        (srun --overlap --ntasks-per-node=1 --gres=gpu:8 bash $POWERCMDDIR/power_monitor.sh) &
     fi
 fi
 
 # Telemetry
 if [[ -f "${TELEMETRY_SCRIPT:-}"  ]]; then
     NODENAME=$(echo "$(hostname)" | sed 's/\..*//')
-    ( srun -N1 --overlap bash ${TELEMETRY_SCRIPT} ${LOGDIR}/${SLURM_JOB_ID}_${NODENAME}_telemetry.log ) &
+    (srun -N1 --overlap --gres=gpu:8 bash ${TELEMETRY_SCRIPT} ${LOGDIR}/${SLURM_JOB_ID}_${NODENAME}_telemetry.log) &
     EXTRA_ASSETS="${EXTRA_ASSETS} --asset /results/${SLURM_JOB_ID}_${NODENAME}_telemetry.log"
 fi
 
 #Set GPU clocks for MaxQ and MinEDP run
 if [[ "${SET_MAXQ_CLK}" == "1" ]] || [[ "${SET_MINEDP_CLK}" == "1" ]]; then
-        if [[ "${SET_MAXQ_CLK}" == "1" ]]; then
-                GPC_CLK=${MAXQ_CLK}
-        fi
-        if [[ "${SET_MINEDP_CLK}" == "1" ]]; then
-                GPC_CLK=${MINEDP_CLK}
-        fi
-	srun --ntasks-per-node=1 bash -c "sudo nvidia-smi -lgc ${GPC_CLK}"
+    if [[ "${SET_MAXQ_CLK}" == "1" ]]; then
+        GPC_CLK=${MAXQ_CLK}
+    fi
+    if [[ "${SET_MINEDP_CLK}" == "1" ]]; then
+        GPC_CLK=${MINEDP_CLK}
+    fi
+    srun --ntasks-per-node=1 --gres=gpu:8 bash -c "sudo nvidia-smi -lgc ${GPC_CLK}"
 fi
 
 echo "PROLOG_STOP $(date +%s)"
@@ -256,13 +256,13 @@ for _experiment_index in $(seq -w 1 "${NEXP}"); do
     (
         echo "Beginning trial ${_experiment_index} of ${NEXP}"
         echo ":::DLPAL ${CONT} ${SLURM_JOB_ID} ${SLURM_JOB_NUM_NODES} ${SLURM_JOB_NODELIST} ${MLPERF_CLUSTER_NAME} ${DGXSYSTEM}"
-        echo ":::SYSJSON $(srun -N1 -n1 --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" mlperf-sysjson.sh)"
-        srun -N1 -n1 --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" bash -c 'echo ":::GITCOMMITID ${GIT_COMMIT_ID} ${LAUNCHER_GIT_COMMIT_ID}"'
+        echo ":::SYSJSON $(srun -N1 -n1 --container-name="${_cont_name}" --gres=gpu:8 "${PYXIS_DEFAULTS[@]}" mlperf-sysjson.sh)"
+        srun -N1 -n1 --container-name="${_cont_name}" --gres=gpu:8 "${PYXIS_DEFAULTS[@]}" bash -c 'echo ":::GITCOMMITID ${GIT_COMMIT_ID} ${LAUNCHER_GIT_COMMIT_ID}"'
 
         # Clear caches
         if [ "${CLEAR_CACHES}" -eq 1 ]; then
-            srun --ntasks-per-node=1 bash -c "echo -n 'Clearing cache on ' && hostname && sync && ${DROPCACHE_CMD}"
-            srun --ntasks-per-node=1 --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" python -c "
+            srun --ntasks-per-node=1 --gres=gpu:8 bash -c "echo -n 'Clearing cache on ' && hostname && sync && ${DROPCACHE_CMD}"
+            srun --ntasks-per-node=1 --container-name="${_cont_name}" --gres=gpu:8 "${PYXIS_DEFAULTS[@]}" python -c "
 from mlperf_logger import mllogger
 mllogger.event(key=mllogger.constants.CACHE_CLEAR, value=True)"
         fi
@@ -273,7 +273,7 @@ mllogger.event(key=mllogger.constants.CACHE_CLEAR, value=True)"
         srun -l --mpi=none \
             --ntasks-per-node="${DGXNGPU}" \
             --time="${WALLTIME_RUNANDTIME}" \
-            --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" \
+            --container-name="${_cont_name}" --gres=gpu:8 "${PYXIS_DEFAULTS[@]}" \
             --container-mounts="${_cont_mounts}" \
             --container-workdir=${WORK_DIR} \
             --container-env=MASTER_PORT,MASTER_ADDR \
@@ -285,7 +285,7 @@ mllogger.event(key=mllogger.constants.CACHE_CLEAR, value=True)"
 
     # compliance checker
     if [[ "${CHECK_COMPLIANCE}" -eq 1 ]]; then
-      srun -N1 -n1 --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" \
+      srun -N1 -n1 --container-name="${_cont_name}" --gres=gpu:8 "${PYXIS_DEFAULTS[@]}" \
            --container-mounts="$(realpath ${LOGDIR}):/results" \
            --container-workdir="/results" \
            python3 -m mlperf_logging.compliance_checker --usage training \
@@ -295,7 +295,6 @@ mllogger.event(key=mllogger.constants.CACHE_CLEAR, value=True)"
       || true
       EXTRA_ASSETS="${EXTRA_ASSETS} --asset /results/compliance_${DATESTAMP}.out"
     fi
-
 
     echo "EXPERIMENT_STOP $(date +%s)"
 done

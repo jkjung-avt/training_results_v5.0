@@ -1,10 +1,13 @@
 
 _cont_mounts="\
+/dev/infiniband:/dev/infiniband,\
 ${DATADIR_PHASE2}:/workspace/data_phase2,\
 ${CHECKPOINTDIR_PHASE1}:/workspace/phase1,\
 ${EVALDIR}:/workspace/evaldata,\
 ${LOGDIR}:/results"
-_cont_mounts="${_cont_mounts}"
+
+#_cont_mounts="${_cont_mounts}"
+
 cont_mounts_to_verify="'/workspace/data_phase2', '/workspace/phase1', '/workspace/evaldata'"
 
 if [[ "${NVTX_FLAG:-0}" -gt 0 ]] && [[ -d "${NVMLPERF_NSIGHT_LOCATION}" ]]; then
