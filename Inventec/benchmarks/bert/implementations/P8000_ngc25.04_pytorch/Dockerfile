@@ -28,16 +28,18 @@ WORKDIR /workspace/bert
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-
 # Preprocessing
 WORKDIR /workspace
 RUN cd /workspace && git clone https://github.com/attardi/wikiextractor.git
 RUN cd /workspace/wikiextractor && git checkout e4abb4cbd019b0257824ee47c23dd163919b731b
 
+# Install TE
+RUN pip install git+https://github.com/NVIDIA/TransformerEngine.git@v1.13
+
 ## TransformerEngine mlperf branch
 ## ARG TE_REVISION=te1_blackwell_ea
 ## ENV CUSTOM_TE_REVISION ${TE_REVISION}
-## 
+##
 ## RUN if [ "${TE_REVISION}" != SKIP ]; then \
 ##       git clone https://github.com/NVIDIA/TransformerEngine.git transformerengine && \
 ##       cd transformerengine && \
@@ -50,10 +52,6 @@ RUN cd /workspace/wikiextractor && git checkout e4abb4cbd019b0257824ee47c23dd163
 ##       git -C 3rdparty/googletest checkout f8d7d77c && \
 ##       NVTE_CUDA_ARCHS="100" MAX_JOBS=4 NVTE_FRAMEWORK=pytorch pip install --force-reinstall --no-deps . \
 ##     ; fi
-
-# Install TE
-## RUN MAX_JOBS=4 pip install git+https://github.com/NVIDIA/TransformerEngine.git@stable
-RUN pip install git+https://github.com/NVIDIA/TransformerEngine.git@v2.6
 
 # Install BERT
 ENV BERT_PREP_WORKING_DIR /workspace/bert/data
