@@ -21,22 +21,20 @@ import transformer_engine.pytorch.fp8 as fp8
 import transformer_engine_torch as tex
 from torch.nn.parameter import Parameter
 
-#from transformer_engine.pytorch.attention import (
-#    _flash_attn_version,
-#    _flash_attn_version_required,
-#    _flash_attn_max_version,
-#    _flash_attn_2_plus,
-#    _flash_attn_2_1_plus,
-#    _flash_attn_2_3_plus,
-#    _flash_attn_2_4_plus,
-#    _flash_attn_2_4_1_plus,
-#    _flash_attn_2_5_7_plus,
-#)
-#if _flash_attn_version >= _flash_attn_version_required:
-#    from flash_attn.flash_attn_interface import _flash_attn_varlen_forward as _flash_attn_forward
-#    from flash_attn.flash_attn_interface import _flash_attn_varlen_backward as _flash_attn_backward
-from flash_attn.flash_attn_interface import _flash_attn_varlen_forward as _flash_attn_forward
-from flash_attn.flash_attn_interface import _flash_attn_varlen_backward as _flash_attn_backward
+from transformer_engine.pytorch.attention import (
+    _flash_attn_version,
+    _flash_attn_version_required,
+    _flash_attn_max_version,
+    _flash_attn_2_plus,
+    _flash_attn_2_1_plus,
+    _flash_attn_2_3_plus,
+    _flash_attn_2_4_plus,
+    _flash_attn_2_4_1_plus,
+    _flash_attn_2_5_7_plus,
+)
+if _flash_attn_version >= _flash_attn_version_required:
+    from flash_attn.flash_attn_interface import _flash_attn_varlen_forward as _flash_attn_forward
+    from flash_attn.flash_attn_interface import _flash_attn_varlen_backward as _flash_attn_backward
 
 from transformer_engine.pytorch.cpp_extensions.fused_attn import (
     FusedAttnBackend,
@@ -45,7 +43,12 @@ from transformer_engine.pytorch.cpp_extensions.fused_attn import (
 )
 from transformer_engine.pytorch.graph import is_graph_capturing
 from transformer_engine.pytorch.module.base import TransformerEngineBaseModule
-from transformer_engine.pytorch.utils import requires_grad, supports_fp8_transposes
+#from transformer_engine.pytorch.utils import requires_grad, supports_fp8_transposes
+from transformer_engine.pytorch.utils import requires_grad
+
+def supports_fp8_transposes() -> bool:
+    """Checks whether the device supports non-TN layouts for FP8 GEMMs. """
+    return torch.cuda.get_device_capability() >= (10, 0)
 
 from fast_dropout_lib import dropout_add_fwd, dropout_bwd
 
