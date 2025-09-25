@@ -35,21 +35,25 @@ RUN cd /workspace && git clone https://github.com/attardi/wikiextractor.git
 RUN cd /workspace/wikiextractor && git checkout e4abb4cbd019b0257824ee47c23dd163919b731b
 
 ## TransformerEngine mlperf branch
-ARG TE_REVISION=te1_blackwell_ea
-ENV CUSTOM_TE_REVISION ${TE_REVISION}
+## ARG TE_REVISION=te1_blackwell_ea
+## ENV CUSTOM_TE_REVISION ${TE_REVISION}
+## 
+## RUN if [ "${TE_REVISION}" != SKIP ]; then \
+##       git clone https://github.com/NVIDIA/TransformerEngine.git transformerengine && \
+##       cd transformerengine && \
+##       git checkout ${TE_REVISION} && \
+##       echo TE_COMMIT_HASH=$(git rev-parse HEAD) && \
+##       echo $(git rev-parse HEAD) > /TE_COMMIT_HASH.env && \
+##       git submodule init && git submodule update && \
+##       git -C 3rdparty/flashattn_internal checkout 9c638b57 && \
+##       git -C 3rdparty/cudnn-frontend checkout 91b7532f && \
+##       git -C 3rdparty/googletest checkout f8d7d77c && \
+##       NVTE_CUDA_ARCHS="100" MAX_JOBS=4 NVTE_FRAMEWORK=pytorch pip install --force-reinstall --no-deps . \
+##     ; fi
 
-RUN if [ "${TE_REVISION}" != SKIP ]; then \
-      git clone https://github.com/NVIDIA/TransformerEngine.git transformerengine && \
-      cd transformerengine && \
-      git checkout ${TE_REVISION} && \
-      echo TE_COMMIT_HASH=$(git rev-parse HEAD) && \
-      echo $(git rev-parse HEAD) > /TE_COMMIT_HASH.env && \
-      git submodule init && git submodule update && \
-      git -C 3rdparty/flashattn_internal checkout 9c638b57 && \
-      git -C 3rdparty/cudnn-frontend checkout 91b7532f && \
-      git -C 3rdparty/googletest checkout f8d7d77c && \
-      NVTE_CUDA_ARCHS="100" MAX_JOBS=4 NVTE_FRAMEWORK=pytorch pip install --force-reinstall --no-deps . \
-    ; fi
+# Install TE
+## RUN MAX_JOBS=4 pip install git+https://github.com/NVIDIA/TransformerEngine.git@stable
+RUN pip install git+https://github.com/NVIDIA/TransformerEngine.git@v2.6
 
 # Install BERT
 ENV BERT_PREP_WORKING_DIR /workspace/bert/data
@@ -61,5 +65,6 @@ ENV PYTHONPATH "/workspace/bert"
 RUN cd /workspace/bert/mhalib && python setup.py build && cp build/lib*/mhalib* ../
 RUN cd /workspace/bert/fast_dropout_lib && pip install .
 
-WORKDIR /workspace/bert
+RUN pip install --upgrade numpy==1.26.4
 
+WORKDIR /workspace/bert
