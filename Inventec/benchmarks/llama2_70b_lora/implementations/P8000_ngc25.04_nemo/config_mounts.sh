@@ -12,7 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-_cont_mounts="${DATADIR}:/data:ro,${MODEL}:/ckpt:ro,${LOGDIR}:/results:rw"
+_cont_mounts="\
+/dev/infiniband:/dev/infiniband,\
+${DATADIR}:/data:ro,\
+${MODEL}:/ckpt:ro,\
+${LOGDIR}:/results:rw"
 mounts_to_verify="DATADIR:/data MODEL:/ckpt"
 
 if [[ "${DEBUG_IN_CWD:-}" ]]; then
