@@ -1,104 +1,134 @@
-## Running NVIDIA NeMo LLama2-70B LoRA PyTorch MLPerf Benchmark
+# MLPerf LLama2-70B LoRA PyTorch Training on Inventec P8000/P9000 GPU Servers
 
-This file contains the instructions for running the NVIDIA NeMo LLama2-70B LoRA PyTorch MLPerf Benchmark on NVIDIA hardware.
+Table of contents
+-----------------
 
-## 1. Hardware Requirements
+* [Environment Setup](#setup)
+* [Step-by-step](#steps)
+* [Known Issues](#issues)
 
-- At least 300GB disk space is required.
-- NVIDIA GPU with at least 80GB memory is strongly recommended.
-- GPU is not needed for preprocessing scripts, but is needed for training.
+<a name="setup"></a>
+Environment Setup
+------------------
 
-## 2. Software Requirements
+Single GPU server case
 
-- Slurm with [Pyxis](https://github.com/NVIDIA/pyxis) and [Enroot](https://github.com/NVIDIA/enroot)
-- [Docker](https://www.docker.com/)
+* Machines
 
-## 3. Set up
+  - Slurm head node * 1, e.g. "p8000-head-1"
+  - Slurm compute node * 1, e.g. "compute-h100-1"
+  - Also refer to [README-NVIDIA.md](README-NVIDIA.md) for hardware and software requirements
 
-### 3.1 Build the container
+* Storage
 
-Replace `<docker/registry>` with your container registry and build:
+  - NFS mounted on both the head and the compute nodes: `/mnt` on "head-p8000-1" and "compute-h100-1"
+  - Data (training data, checkpoints) in /mnt/mlperf/llama2_70b_lora_data
+  - Docker container file in /mnt/sqsh
+  - Source code in /mnt/jkjung/training_results_v5.0/Inventec/benchmarks/llama2_70b_lora/implementations/P8000_ngc25.04_nemo
 
-```bash
-docker build -t <docker/registry>/mlperf-nvidia:llama2_70b_lora-pyt .
-```
+Multiple GPU server case (TO-DO)
 
-### 3.2 Download dataset and model + preprocessing
+* ......
 
-This benchmark uses the [GovReport](https://gov-report-data.github.io/) dataset.
+<a name="steps"></a>
+Step-by-step
+------------
 
-Start the container, replacing `</path/to/dataset>` with the existing path to where you want to save the dataset and the model weights/tokenizer:
+1. Clone this repository on the compute node ("compute-h100-1").  You might want to replace `/mnt/jkjung` with your own directory.
 
-```bash
-docker run -it --rm --gpus all --network=host --ipc=host --volume </path/to/dataset>:/data <docker/registry>/mlperf-nvidia:llama2_70b_lora-pyt
-# now you should be inside the container in the /workspace/ft-llm directory
-python scripts/download_dataset.py --data_dir /data/gov_report  # download and preprocess dataset; takes less than 1 minute
-python scripts/download_model.py --model_dir /data/model  # download preprocessed model checkpoint in NeMo format used for initialization; could take up to 30 minutes
-```
+   ```shell
+   cd /mnt/jkjung
+   git clone https://github.com/jkjung-avt/training_results_v5.0.git
+   ```
 
-You can also use the `scripts/convert_model.py` script, which downloads the original LLaMA2-70B model and converts it to the NeMo format, e.g. `python scripts/convert_model.py --output_path /data/model`. This script requires that you either: have set the `HF_TOKEN` with granted access to the `meta-llama/Llama-2-70B-hf`, or have already downloaded the LLaMA2-70B checkpoint and set `HF_HOME` to its location.
+2. Build the container on the compute node ("compute-h100-1").  You will have to use your NGC API key to pull the base pytorch docker image, e.g. `docker login nvcr.io` or use `~/.config/enroot/.credentials`.  Note that the docker image name "bert_ngc23.09_pyt" is different from that in NVIDIA's original implementation.
 
-After both scripts finish you should see the following files in the `/data` directory:
+   ```shell
+   cd training_results_v5.0/Inventec/benchmarks/llama2_70b_lora/implementations/P8000_ngc25.04_nemo/
+   docker build --pull -t mlperf-nvidia:llama2_70b_lora_pyt .
+   ```
 
-```
-/data
-├── gov_report
-│   ├── train.npy
-│   └── validation.npy
-└── model
-    ├── context
-    │   ├── io.json
-    │   ├── model.yaml
-    │   └── nemo_tokenizer
-    └── weights
-        ├── common.pt
-        ├── metadata.json
-        ├── module.decoder.final_layernorm._extra_state
-        ├── module.decoder.final_layernorm.weight
-        ├── module.decoder.layers.mlp.linear_fc1._extra_state
-        ├── module.decoder.layers.mlp.linear_fc1.layer_norm_weight
-        ├── module.decoder.layers.mlp.linear_fc1.weight
-        ├── module.decoder.layers.mlp.linear_fc2._extra_state
-        ├── module.decoder.layers.mlp.linear_fc2.weight
-        ├── module.decoder.layers.self_attention.core_attention._extra_state
-        ├── module.decoder.layers.self_attention.linear_proj._extra_state
-        ├── module.decoder.layers.self_attention.linear_proj.weight
-        ├── module.decoder.layers.self_attention.linear_qkv._extra_state
-        ├── module.decoder.layers.self_attention.linear_qkv.layer_norm_weight
-        ├── module.decoder.layers.self_attention.linear_qkv.weight
-        ├── module.embedding.word_embeddings.weight
-        └── module.output_layer.weight
-```
+3. Download dataset, download model, and do preprocessing on the compute node ("compute-h100-1").
 
-Exit the container.
+   Start the container with the following command.
 
-## 4. Launch training
+   ```bash
+   docker run -it --gpus=all --rm --gpus all --network=host --ipc=host -v /mnt/mlperf/llama2_70b_lora_data:/data mlperf-nvidia:llama2_70b_lora_pyt
+   ```
 
-For training, we use Slurm with the Pyxis extension, and Slurm's MPI support to run our container.
+   Then run within the container, under the /workspace/ft-llm directory:
 
-Navigate to the directory where `run.sub` is stored.
+   ```bash
+   python scripts/download_dataset.py --data_dir /data/gov_report
+   python scripts/download_model.py --model_dir /data/model
+   ```
 
-The launch command structure:
+   This 1st script takes less than 1 minute.  The second script could take up to 30 minutes.  After both scripts finish, you should see the following files in the `/data` directory:
 
-```bash
-export DATADIR="</path/to/dataset>/gov_report"  # set your </path/to/dataset>
-export MODEL="</path/to/dataset>/model"  # set your </path/to/dataset>
-export LOGDIR="</path/to/output_logdir>"  # set the place where the output logs will be saved
-export CONT=<docker/registry>/mlperf-nvidia:llama2_70b_lora-pyt
-source config_<system>.sh  # select config and source it
-sbatch -N $DGXNNODES -t $WALLTIME run.sub  # you may be required to set --account and --partition here
-```
+   ```
+   /data
+   ├── gov_report
+   │   ├── train.npy
+   │   └── validation.npy
+   └── model
+       ├── context
+       │   ├── io.json
+       │   ├── model.yaml
+       │   └── nemo_tokenizer
+       └── weights
+           ├── common.pt
+           ├── metadata.json
+           ├── module.decoder.final_layernorm._extra_state
+           ├── module.decoder.final_layernorm.weight
+           ├── module.decoder.layers.mlp.linear_fc1._extra_state
+           ├── module.decoder.layers.mlp.linear_fc1.layer_norm_weight
+           ├── module.decoder.layers.mlp.linear_fc1.weight
+           ├── module.decoder.layers.mlp.linear_fc2._extra_state
+           ├── module.decoder.layers.mlp.linear_fc2.weight
+           ├── module.decoder.layers.self_attention.core_attention._extra_state
+           ├── module.decoder.layers.self_attention.linear_proj._extra_state
+           ├── module.decoder.layers.self_attention.linear_proj.weight
+           ├── module.decoder.layers.self_attention.linear_qkv._extra_state
+           ├── module.decoder.layers.self_attention.linear_qkv.layer_norm_weight
+           ├── module.decoder.layers.self_attention.linear_qkv.weight
+           ├── module.embedding.word_embeddings.weight
+           └── module.output_layer.weight
+   ```
 
-## 5. Evaluation
+   Exit the container.
 
-### Quality metric
-Cross entropy loss
+4. Create the SquashFS file from the docker image on the compute node ("compute-h100-1").
 
-### Quality target
-0.925
+   ```bash
+   enroot import -o /mnt/sqsh/llama2_70b_lora_pyt.sqsh dockerd://mlperf-nvidia:llama2_70b_lora_pyt
+   ```
 
-### Evaluation frequency
-Every 384 sequences, CEIL(384 / global_batch_size) steps if 384 is not divisible by GBS. Skipping first FLOOR(0.125*global_batch_size+2) evaluations
+5. Launch training with slurm on the *head* node ("head-p8000-1").  Navigate to the directory where `run.sub` is stored and execute the following.
 
-### Evaluation thoroughness
-Evaluation on the validation subset that consists of 173 examples
+   ```bash
+   source env.sh
+   source config_P8000_1x8x1xtp1pp1cp1.sh
+   sbatch -w compute-h100-1 -t ${WALLTIME} run.sub
+   ```
+
+   Note:
+
+   * Rename "compute-h100-1" if you are using a different slurm compute node.
+   * It's a good idea, before you start `run.sub`, to verify that there is no process occupying the CPUs/GPUs/memory on the compute node.  For example, do `docker ps -a` and `docker rm <CONTAINER ID>` to remove all running/pending containers.
+   * You could adjust experiment setting in the `env.sh` script.
+
+   The above `sbatch` command would output the slurm batch job id.  You could track progress of the slurm batch job by checking the corresponding log file.
+
+   ```bash
+   tail -f slurm-<SLURM JOB ID>.out
+   ```
+
+6. Check experiment results in the `results` folder.
+
+<a name="issues"></a>
+Known Issues
+------------
+
+* `--gres=gpu:8` needs to be explicitly added to all `srun` commands.  This is done in `run.sub`.
+* Dedicating CPUs for WekaIO causing numa "cpu argument out of range" errors, e.g. `<84-95,180-191> is invalid`.
+* `SLURM_MPI_TYPE`: `pmi2` works but `pmix` doesn't.
