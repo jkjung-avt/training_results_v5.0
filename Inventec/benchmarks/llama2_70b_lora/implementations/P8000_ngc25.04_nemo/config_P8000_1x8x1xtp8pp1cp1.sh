@@ -3,10 +3,10 @@
 source $(dirname ${BASH_SOURCE[0]})/config_common.sh
 
 # hyperparameters
-export MAX_STEPS=800
+export MAX_STEPS=6400
 export LR=0.00055
 export MINIBS=1
-export TP=2
+export TP=8
 export CP=1
 export SP=0
 
