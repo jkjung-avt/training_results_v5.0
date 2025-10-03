@@ -45,7 +45,7 @@ Step-by-step
 
    ```shell
    cd training_results_v5.0/Inventec/benchmarks/llama2_70b_lora/implementations/P8000_ngc25.04_nemo/
-   docker build --pull -t mlperf-nvidia:llama2_70b_lora_pyt .
+   docker build -t mlperf-nvidia:llama2_70b_lora_pyt .
    ```
 
 3. Download dataset, download model, and do preprocessing on the compute node ("compute-h100-1").
