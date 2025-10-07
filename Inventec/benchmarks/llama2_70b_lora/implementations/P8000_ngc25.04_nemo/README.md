@@ -129,6 +129,4 @@ Step-by-step
 Known Issues
 ------------
 
-* `--gres=gpu:8` needs to be explicitly added to all `srun` commands.  This is done in `run.sub`.
-* Dedicating CPUs for WekaIO causing numa "cpu argument out of range" errors, e.g. `<84-95,180-191> is invalid`.
 * `SLURM_MPI_TYPE`: `pmi2` works but `pmix` doesn't.
