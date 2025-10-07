@@ -22,7 +22,8 @@ model:
   pipeline_model_parallel_size: ${oc.decode:${oc.env:PP,1}}
   context_parallel_size: ${oc.decode:${oc.env:CP,1}}
   eval_cp: ${oc.decode:${oc.env:CP_EVAL,null}}
-  global_batch_size: ${floor_div:${multiply:${oc.decode:${oc.env:MINIBS,1}},${floor_div:${multiply:${trainer.devices},${trainer.num_nodes}},${multiply:${model.tensor_model_parallel_size},${model.pipeline_model_parallel_size}}}},${oc.decode:${oc.env:CP,1}}}
+  #global_batch_size: ${floor_div:${multiply:${oc.decode:${oc.env:MINIBS,1}},${floor_div:${multiply:${trainer.devices},${trainer.num_nodes}},${multiply:${model.tensor_model_parallel_size},${model.pipeline_model_parallel_size}}}},${oc.decode:${oc.env:CP,1}}}
+  global_batch_size: 8
   micro_batch_size: ${oc.decode:${oc.env:MBS,1}}
   val_micro_batch_size: ${oc.decode:${oc.env:VAL_MBS,null}}
   val_global_batch_size: ${floor_div:${multiply:${oc.decode:${oc.env:VAL_MBS,1}},${floor_div:${multiply:${trainer.devices},${trainer.num_nodes}},${multiply:${model.tensor_model_parallel_size},${model.pipeline_model_parallel_size}}}},${oc.decode:${oc.env:CP_EVAL,${oc.env:CP,1}}}}
