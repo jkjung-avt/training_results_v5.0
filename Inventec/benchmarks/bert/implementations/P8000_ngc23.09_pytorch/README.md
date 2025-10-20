@@ -45,7 +45,7 @@ Step-by-step
 
    ```shell
    cd training_results_v5.0/Inventec/benchmarks/bert/implementations/P8000_ngc23.09_pytorch/
-   docker build --pull -t mlperf-nvidia:bert_ngc23.09_pyt .
+   docker build -t mlperf-nvidia:bert_ngc23.09_pyt .
    ```
 
 3. Prepare dataset on the compute node ("compute-h100-1").  You could refer to [README-NVIDIA.md](README-NVIDIA.md) for more details about the `prepare_data.sh` script.
@@ -128,6 +128,5 @@ Step-by-step
 Known Issues
 ------------
 
-* `--gres=gpu:8` needs to be explicitly added to all `srun` commands.  This is done in `run.sub`.
 * Dedicating CPUs for WekaIO causing numa "cpu argument out of range" errors, e.g. `<84-95,180-191> is invalid`.
 * `SLURM_MPI_TYPE`: `pmi2` works but `pmix` doesn't.
