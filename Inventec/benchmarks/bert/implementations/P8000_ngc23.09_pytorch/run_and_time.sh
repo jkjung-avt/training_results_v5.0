@@ -105,17 +105,18 @@ PHASE2="\
 PHASES=( "$PHASE1" "$PHASE2" )
 
 declare -a CMD
-if [[ -n "${SLURM_LOCALID-}" ]] && [[ "${SLURM_NTASKS}" -gt "${SLURM_JOB_NUM_NODES}" ]]; then
-    # Mode 1: Slurm launched a task for each GPU and set some envvars
-    IB_BIND=''
-    if [[ "${SLURM_JOB_NUM_NODES}" -gt 1 && "${ENABLE_IB_BINDING}" -eq 1 ]]; then
-      IB_BIND='--ib=single'
-    fi
-    CMD=( 'bindpcie' ${IB_BIND} '--cpu=exclusive' '--' ${NSYSCMD} 'python' '-u' )
-else
-    # docker or single gpu, no need to bind
-    CMD=( ${NSYSCMD} 'python' '-u' )
-fi
+#if [[ -n "${SLURM_LOCALID-}" ]] && [[ "${SLURM_NTASKS}" -gt "${SLURM_JOB_NUM_NODES}" ]]; then
+#    # Mode 1: Slurm launched a task for each GPU and set some envvars
+#    IB_BIND=''
+#    if [[ "${SLURM_JOB_NUM_NODES}" -gt 1 && "${ENABLE_IB_BINDING}" -eq 1 ]]; then
+#      IB_BIND='--ib=single'
+#    fi
+#    CMD=( 'bindpcie' ${IB_BIND} '--cpu=exclusive' '--' ${NSYSCMD} 'python' '-u' )
+#else
+#    # docker or single gpu, no need to bind
+#    CMD=( ${NSYSCMD} 'python' '-u' )
+#fi
+CMD=( ${NSYSCMD} 'python' '-u' )
 
 
 # Run fixed number of training samples
