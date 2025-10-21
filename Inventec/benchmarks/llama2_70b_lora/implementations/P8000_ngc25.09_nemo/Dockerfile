@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG FROM_IMAGE_NAME=nvcr.io/nvidia/pytorch:25.04-py3
+ARG FROM_IMAGE_NAME=nvcr.io/nvidia/pytorch:25.09-py3
 FROM ${FROM_IMAGE_NAME}
 WORKDIR /workspace/ft-llm
 
@@ -27,7 +27,7 @@ ENV PIP_CONSTRAINT=""
 RUN pip install numcodecs==0.13.1
 
 ## NeMo
-ARG NEMO_REVISION=25.04-alpha.rc1
+ARG NEMO_REVISION=25.09-alpha.rc2
 RUN git clone https://github.com/NVIDIA/NeMo.git && \
     cd NeMo && \
     git checkout ${NEMO_REVISION} && \
@@ -36,7 +36,7 @@ RUN git clone https://github.com/NVIDIA/NeMo.git && \
     pip install -e ".[nlp]"
 
 ## Megatron-core
-ARG MCORE_REVISION=25.04-alpha.rc1
+ARG MCORE_REVISION=25.09-alpha.rc1
 RUN pip uninstall -y megatron-core && \
     git clone https://github.com/NVIDIA/Megatron-LM Megatron-LM && \
     cd Megatron-LM && \
@@ -68,5 +68,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends libopencc-dev
 
 ADD . /workspace/ft-llm
 
-
 RUN pip install -r requirements.txt
+
+## fix bitsandbytes version
+RUN pip install --upgrade bitsandbytes==0.48.1

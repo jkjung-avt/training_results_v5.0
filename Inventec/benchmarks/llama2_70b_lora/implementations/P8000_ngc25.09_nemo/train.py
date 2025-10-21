@@ -233,7 +233,6 @@ def prepare_model(tokenizer: AutoTokenizer, cfg: DictConfig):
     if cfg.load_ckpt:
         restore_config = RestoreConfig(
             path=cfg.ckpt_root,
-            adapter_path=None,
             load_model_state=True,
             load_optim_state=False,
             load_artifacts=False,

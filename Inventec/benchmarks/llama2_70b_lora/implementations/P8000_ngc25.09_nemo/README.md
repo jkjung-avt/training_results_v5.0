@@ -24,7 +24,7 @@ Single GPU server case
   - NFS mounted on both the head and the compute nodes: `/mnt` on "head-p8000-1" and "compute-h100-1"
   - Data (training data, checkpoints) in /mnt/mlperf/llama2_70b_lora_data
   - Docker container file in /mnt/sqsh
-  - Source code in /mnt/jkjung/training_results_v5.0/Inventec/benchmarks/llama2_70b_lora/implementations/P8000_ngc25.04_nemo
+  - Source code in /mnt/jkjung/training_results_v5.0/Inventec/benchmarks/llama2_70b_lora/implementations/P8000_ngc25.09_nemo
 
 Multiple GPU server case (TO-DO)
 
@@ -44,8 +44,8 @@ Step-by-step
 2. Build the container on the compute node ("compute-h100-1").  You will have to use your NGC API key to pull the base pytorch docker image, e.g. `docker login nvcr.io` or use `~/.config/enroot/.credentials`.  Note that the docker image name "bert_ngc23.09_pyt" is different from that in NVIDIA's original implementation.
 
    ```shell
-   cd training_results_v5.0/Inventec/benchmarks/llama2_70b_lora/implementations/P8000_ngc25.04_nemo/
-   docker build -t mlperf-nvidia:llama2_70b_lora_pyt .
+   cd training_results_v5.0/Inventec/benchmarks/llama2_70b_lora/implementations/P8000_ngc25.09_nemo/
+   docker build -t mlperf-nvidia:llama2_70b_lora_ngc25.09_pyt .
    ```
 
 3. Download dataset, download model, and do preprocessing on the compute node ("compute-h100-1").
@@ -53,7 +53,7 @@ Step-by-step
    Start the container with the following command.
 
    ```bash
-   docker run -it --gpus=all --rm --gpus all --network=host --ipc=host -v /mnt/mlperf/llama2_70b_lora_data:/data mlperf-nvidia:llama2_70b_lora_pyt
+   docker run -it --rm --gpus all --network=host --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 -v /mnt/mlperf/llama2_70b_lora_data:/data mlperf-nvidia:llama2_70b_lora_ngc25.09_pyt
    ```
 
    Then run within the container, under the /workspace/ft-llm directory:
@@ -100,7 +100,7 @@ Step-by-step
 4. Create the SquashFS file from the docker image on the compute node ("compute-h100-1").
 
    ```bash
-   enroot import -o /mnt/sqsh/llama2_70b_lora_pyt.sqsh dockerd://mlperf-nvidia:llama2_70b_lora_pyt
+   enroot import -o /mnt/sqsh/llama2_70b_lora_ngc25.09_pyt.sqsh dockerd://mlperf-nvidia:llama2_70b_lora_ngc25.09_pyt
    ```
 
 5. Launch training with slurm on the *head* node ("head-p8000-1").  Navigate to the directory where `run.sub` is stored and execute the following.
