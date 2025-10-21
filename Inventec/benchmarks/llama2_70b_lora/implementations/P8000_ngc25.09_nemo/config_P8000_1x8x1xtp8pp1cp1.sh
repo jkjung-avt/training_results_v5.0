@@ -27,4 +27,8 @@ export DGXNGPU=8
 export WALLTIME_RUNANDTIME=60
 export WALLTIME=$((5 + ${NEXP:-1} * ($WALLTIME_RUNANDTIME + 10)))
 
+# Inventec stuffs
+export MLPERF_SUBMITTER="Inventec Corporation"
+export MLPERF_SYSTEM_NAME="P8000H100"
+export MLPERF_STATUS="research"
 export GPU_ARCH=h
