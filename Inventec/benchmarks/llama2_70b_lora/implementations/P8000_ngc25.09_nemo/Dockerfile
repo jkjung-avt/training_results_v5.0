@@ -46,11 +46,11 @@ RUN pip uninstall -y megatron-core && \
     pip install . && \
     cd megatron/core/datasets && \
     make
-ENV PYTHONPATH "${PYTHONPATH}:/workspace/ft-llm/Megatron-LM"
+ENV PYTHONPATH="/workspace/ft-llm/Megatron-LM"
 
 ## TransformerEngine
 ARG TE_REVISION=SKIP
-ENV CUSTOM_TE_REVISION ${TE_REVISION}
+ENV CUSTOM_TE_REVISION=${TE_REVISION}
 
 RUN if [ "${TE_REVISION}" != SKIP ]; then \
     pip uninstall -y transformer_engine && \
