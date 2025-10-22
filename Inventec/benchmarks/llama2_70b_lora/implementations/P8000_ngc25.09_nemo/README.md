@@ -26,9 +26,12 @@ Single GPU server case
   - Docker container file in /mnt/sqsh
   - Source code in /mnt/jkjung/training_results_v5.0/Inventec/benchmarks/llama2_70b_lora/implementations/P8000_ngc25.09_nemo
 
-Multiple GPU server case (TO-DO)
+Multiple GPU servers case
 
-* ......
+* Basically similar set-up as the single CPU server case, but
+  - Prepare 2 or more compute nodes
+  - Modify `DGXNNODES` in (config_P8000_1x8x1xtp8pp1cp1.sh)[config_P8000_1x8x1xtp8pp1cp1.sh] to match the number of compute nodes for the experiment.
+  - Specify the compute nodes to be used in the `sbatch` command in Step #6 below.
 
 <a name="steps"></a>
 Step-by-step
@@ -129,4 +132,4 @@ Step-by-step
 Known Issues
 ------------
 
-* `SLURM_MPI_TYPE`: `pmi2` works but `pmix` doesn't.
+* `SLURM_MPI_TYPE`: `pmi2` seems be perform better than `pmix` in out experiments.
