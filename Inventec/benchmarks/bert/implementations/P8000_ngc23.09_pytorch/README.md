@@ -16,15 +16,15 @@ Single GPU server case
 * Machines
 
   - Slurm head node * 1, e.g. "p8000-head-1"
-  - Slurm compute node * 1, e.g. "compute-h100-1"
+  - Slurm compute node * 1 or more, e.g. "compute-h100-1", "compute-h100-2", ...
   - Also refer to [README-NVIDIA.md](README-NVIDIA.md) for hardware and software requirements
 
 * Storage
 
-  - Network storage (preferably a High Performance Storage) mounted on both the head and the compute nodes: `/hps` on "head-p8000-1" and "compute-h100-1", "compute-h100-2", ...
-  - Data (training data, validation data, checkpoints) in ${BERT_DATA_DIR} (/hps/data/mlperf/bert)
-  - Docker container SquashFS file in ${SQSH_DIR} (/hps/sqsh)
-  - Source code in ${USER_DIR}/training_results_v5.0/Inventec/benchmarks/bert/implementations/P8000_ngc23.09_pytorch
+  - Network storage (preferably a High Performance Storage) mounted on both the head and the compute nodes: `/hps` or `/mnt` on "head-p8000-1" and "compute-h100-1", "compute-h100-2", ...
+  - Source code to be checked out in ${USER_DIR} (`/mnt/jkjung`), where the bert benchmark code is found at `training_results_v5.0/Inventec/benchmarks/bert/implementations/P8000_ngc23.09_pytorch`
+  - Data (training data, validation data, checkpoints) in ${BERT_DATA_DIR} (`/hps/data/mlperf/bert`)
+  - Docker container SquashFS file in ${SQSH_DIR} (`/hps/sqsh`)
 
 <a name="steps"></a>
 Step-by-step
