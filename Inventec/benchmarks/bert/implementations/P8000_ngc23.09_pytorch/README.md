@@ -21,27 +21,31 @@ Single GPU server case
 
 * Storage
 
-  - NFS mounted on both the head and the compute nodes: `/mnt` on "head-p8000-1" and "compute-h100-1"
-  - Data (training data, checkpoints) in /mnt/mlperf/bert_data
-  - Docker container file in /mnt/sqsh
-  - Source code in /mnt/jkjung/training_results_v5.0/Inventec/benchmarks/bert/implementations/P8000_ngc23.09_pytorch
-
-Multiple GPU server case (TO-DO)
-
-* ......
+  - Network storage (preferably a High Performance Storage) mounted on both the head and the compute nodes: `/hps` on "head-p8000-1" and "compute-h100-1", "compute-h100-2", ...
+  - Data (training data, validation data, checkpoints) in ${BERT_DATA_DIR} (/hps/data/mlperf/bert)
+  - Docker container SquashFS file in ${SQSH_DIR} (/hps/sqsh)
+  - Source code in ${USER_DIR}/training_results_v5.0/Inventec/benchmarks/bert/implementations/P8000_ngc23.09_pytorch
 
 <a name="steps"></a>
 Step-by-step
 ------------
 
-1. Clone this repository on the compute node ("compute-h100-1").  You might want to replace `/mnt/jkjung` with your own directory.
+1. Set environment variables.  Replace the paths below with your own if necessary.
 
    ```shell
-   cd /mnt/jkjung
+   export USER_DIR=/mnt/jkjung
+   export BERT_DATA_DIR=/hps/data/mlperf/bert
+   export SQSH_DIR=/hps/sqsh
+   ```
+
+Clone this repository on the compute node ("compute-h100-1").
+
+   ```shell
+   cd ${USER_DIR}
    git clone https://github.com/jkjung-avt/training_results_v5.0.git
    ```
 
-2. Build the container on the compute node ("compute-h100-1").  You will have to use your NGC API key to pull the base pytorch docker image, e.g. `docker login nvcr.io` or use `~/.config/enroot/.credentials`.  Note that the docker image name "bert_ngc23.09_pyt" is different from that in NVIDIA's original implementation.
+2. Build the container on the compute node ("compute-h100-1").  You will have to use your NGC API key to pull the base PyTorch docker image, e.g. `docker login nvcr.io` or use `~/.config/enroot/.credentials`.  Note that the docker image name "bert_ngc23.09_pyt" is different from that in NVIDIA's original implementation.
 
    ```shell
    cd training_results_v5.0/Inventec/benchmarks/bert/implementations/P8000_ngc23.09_pytorch/
@@ -53,7 +57,7 @@ Step-by-step
    Start the container with the following command.  Note that the container (without the `--rm` flag) is not removed automatically.  You'll need to do `docker rm <CONTAINER ID>` manually.
 
    ```bash
-   docker run -it --gpus=all --runtime=nvidia --ipc=host -v /mnt/mlperf/bert_data:/workspace/bert_data mlperf-nvidia:bert_ngc23.09_pyt
+   docker run -it --gpus=all --runtime=nvidia --ipc=host -v ${BERT_DATA_DIR}:/workspace/bert_data mlperf-nvidia:bert_ngc23.09_pyt
    ```
 
    Then run within the container:
@@ -96,13 +100,13 @@ Step-by-step
        └── vocab.txt
    ```
 
-4. Create the SquashFS file from the docker image on the compute node ("compute-h100-1").  The created `/mnt/sqsh/bert_ngc23.09_pyt.sqsh` file is needed for running the experiment with slurm.
+4. Create the SquashFS file from the docker image on the compute node ("compute-h100-1").  The created `${SQSH_DIR}/bert_ngc23.09_pyt.sqsh` file is needed for running the experiment with Slurm.
 
    ```bash
-   enroot import -o /mnt/sqsh/bert_ngc23.09_pyt.sqsh dockerd://mlperf-nvidia:bert_ngc23.09_pyt
+   enroot import -o ${SQSH_DIR}/bert_ngc23.09_pyt.sqsh dockerd://mlperf-nvidia:bert_ngc23.09_pyt
    ```
 
-5. Launch training with slurm on the *head* node ("head-p8000-1").  Navigate to the directory where `run.sub` is stored and execute the following.
+5. Launch training with Slurm on the *head* node ("head-p8000-1").  Navigate to the directory where `run.sub` is stored and execute the following.
 
    ```bash
    source env.sh
@@ -112,11 +116,11 @@ Step-by-step
 
    Note:
 
-   * Rename "compute-h100-1" if you are using a different slurm compute node.
+   * Rename "compute-h100-1" if you are using a different Slurm compute node.
    * It's a good idea, before you start `run.sub`, to verify that there is no process occupying the CPUs/GPUs/memory on the compute node.  For example, do `docker ps -a` and `docker rm <CONTAINER ID>` to remove all running/pending containers.
    * You could adjust experiment setting in the `env.sh` script.
 
-   The above `sbatch` command would output the slurm batch job id.  You could track progress of the slurm batch job by checking the corresponding log file.
+   The above `sbatch` command would output the Slurm batch job id.  You could track progress of the Slurm batch job by checking the corresponding log file.
 
    ```bash
    tail -f slurm-<SLURM JOB ID>.out
@@ -128,5 +132,7 @@ Step-by-step
 Known Issues
 ------------
 
-* Dedicating CPUs for WekaIO causing numa "cpu argument out of range" errors, e.g. `<84-95,180-191> is invalid`.
 * `SLURM_MPI_TYPE`: `pmi2` works but `pmix` doesn't.
+   - This has to do with the version of Slurm being used.
+* (Solved) Dedicating CPUs for WekaIO causing numa "cpu argument out of range" errors, e.g. `<84-95,180-191> is invalid`.
+   - This has been resolved by removing the `bindpcie` call in "run_and_time.sh".
