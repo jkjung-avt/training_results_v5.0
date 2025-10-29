@@ -1,4 +1,3 @@
-: "${USER_DIR:?ERROR: USER_DIR not set}"
 : "${BERT_DATA_DIR:?ERROR: BERT_DATA_DIR not set}"
 : "${SQSH_DIR:?ERROR: SQSH_DIR not set}"
 
