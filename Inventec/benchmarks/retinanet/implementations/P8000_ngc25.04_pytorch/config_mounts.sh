@@ -1,6 +1,8 @@
 
-_cont_mounts="${LOGDIR}:/results"
-cont_mounts_to_verify="'/datasets/open-images-v6'"
+_cont_mounts="/dev/infiniband:/dev/infiniband,${LOGDIR}:/results"
+
+#cont_mounts_to_verify="'/datasets/open-images-v6'"
+
 if [ "${USE_SYNTHETIC_DATA:-0}" -eq 0 ]; then
     _cont_mounts="${DATADIR}:/datasets/open-images-v6,${_cont_mounts},${BACKBONE_DIR}:/root/.cache/torch"
 else
