@@ -71,7 +71,7 @@ ENV TORCH_CUDNN_V8_API_ENABLED=${TORCH_CUDNN_V8_API_ENABLED}
 
 # Apex
 ARG APEX_REVISION=SKIP
-ENV CUSTOM_APEX_REVISION ${APEX_REVISION}
+ENV CUSTOM_APEX_REVISION=${APEX_REVISION}
 
 RUN if [ "${APEX_REVISION}" != SKIP ]; then \
       git clone https://github.com/NVIDIA/apex.git && \
@@ -115,4 +115,4 @@ RUN export DEBIAN_FRONTEND=noninteractive &&        \
     echo "NCCL_REVISION=${NCCL_REVISION}" &&      \
     git checkout "${NCCL_REVISION}" &&             \
     make -j24 install
-ENV NCCL_VERSION "${NCCL_VERSION}-fix-${NCCL_REVISION}"
+ENV NCCL_VERSION="${NCCL_VERSION}-fix-${NCCL_REVISION}"
