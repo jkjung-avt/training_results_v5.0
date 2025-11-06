@@ -62,6 +62,8 @@ Step-by-step
 
    ```bash
    cd /workspace/ssd
+   pip install --upgrade numpy==1.26.4
+   pip install opencv_python_headless==4.11.0.86
    pip install fiftyone==1.2.0
    export FIFTYONE_DATASET_ZOO_DIR=/workspace/ssd_dataset
    ./public-scripts/download_openimages_mlperf.sh -d /workspace/ssd_dataset/open-images-v6
