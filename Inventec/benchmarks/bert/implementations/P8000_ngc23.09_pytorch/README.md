@@ -11,8 +11,6 @@ Table of contents
 Environment Setup
 ------------------
 
-Single GPU server case
-
 * Machines
 
   - Slurm head node * 1, e.g. "p8000-head-1"
@@ -38,14 +36,14 @@ Step-by-step
    export SQSH_DIR=/hps/sqsh
    ```
 
-Clone this repository on the compute node ("compute-h100-1").
+   Then clone this repository on the compute node ("compute-h100-1").
 
    ```shell
    cd ${USER_DIR}
    git clone https://github.com/jkjung-avt/training_results_v5.0.git
    ```
 
-2. Build the container on the compute node ("compute-h100-1").  You will have to use your NGC API key to pull the base PyTorch docker image, e.g. `docker login nvcr.io` or use `~/.config/enroot/.credentials`.  Note that the docker image name "bert_ngc23.09_pyt" is different from that in NVIDIA's original implementation.
+2. Build the container on the compute node ("compute-h100-1").  You will have to use your NGC API key to pull the base PyTorch docker image, e.g. `docker login nvcr.io` or use `~/.config/enroot/.credentials`.
 
    ```shell
    cd training_results_v5.0/Inventec/benchmarks/bert/implementations/P8000_ngc23.09_pytorch/
@@ -111,7 +109,7 @@ Clone this repository on the compute node ("compute-h100-1").
    ```bash
    source env.sh
    source config_P8000H100_1x8x48x1_pack.sh
-   sbatch -w compute-h100-1 --time=${WALLTIME} run.sub
+   sbatch -w compute-h100-1 -t ${WALLTIME} run.sub
    ```
 
    Note:
@@ -132,7 +130,6 @@ Clone this repository on the compute node ("compute-h100-1").
 Known Issues
 ------------
 
-* `SLURM_MPI_TYPE`: `pmi2` works but `pmix` doesn't.
-   - This has to do with the version of Slurm being used.
+* `SLURM_MPI_TYPE`: `pmi2` seems be perform better than `pmix` in our experiments.
 * (Solved) Dedicating CPUs for WekaIO causing numa "cpu argument out of range" errors, e.g. `<84-95,180-191> is invalid`.
    - This has been resolved by removing the `bindpcie` call in "run_and_time.sh".

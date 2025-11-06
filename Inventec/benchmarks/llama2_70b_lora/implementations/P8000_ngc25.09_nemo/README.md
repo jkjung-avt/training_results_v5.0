@@ -11,40 +11,39 @@ Table of contents
 Environment Setup
 ------------------
 
-Single GPU server case
-
 * Machines
 
   - Slurm head node * 1, e.g. "p8000-head-1"
-  - Slurm compute node * 1, e.g. "compute-h100-1"
+  - Slurm compute node * 1 or more, e.g. "compute-h100-1", "compute-h100-2", ...
   - Also refer to [README-NVIDIA.md](README-NVIDIA.md) for hardware and software requirements
 
 * Storage
 
-  - NFS mounted on both the head and the compute nodes: `/mnt` on "head-p8000-1" and "compute-h100-1"
-  - Data (training data, checkpoints) in /mnt/mlperf/llama2_70b_lora_data
-  - Docker container file in /mnt/sqsh
-  - Source code in /mnt/jkjung/training_results_v5.0/Inventec/benchmarks/llama2_70b_lora/implementations/P8000_ngc25.09_nemo
-
-Multiple GPU servers case
-
-* Basically similar set-up as the single CPU server case, but
-  - Prepare 2 or more compute nodes
-  - Modify `DGXNNODES` in (config_P8000_1x8x1xtp8pp1cp1.sh)[config_P8000_1x8x1xtp8pp1cp1.sh] to match the number of compute nodes for the experiment.
-  - Specify the compute nodes to be used in the `sbatch` command in Step #6 below.
+  - Network storage (preferably a High Performance Storage) mounted on both the head and the compute nodes: `/hps` or `/mnt` on "head-p8000-1" and "compute-h100-1", "compute-h100-2", ...
+  - Source code to be checked out in ${USER_DIR} (`/mnt/jkjung`), where the llama2_70b_lora benchmark code is found at `training_results_v5.0/Inventec/benchmarks/llama2_70b_lora/implementations/P8000_ngc25.09_nemo
+  - Data (training data, validation data, checkpoints) in ${LLAMA2_DATA_DIR} (`/hps/data/mlperf/llama2`)
+  - Docker container SquashFS file in ${SQSH_DIR} (`/hps/sqsh`)
 
 <a name="steps"></a>
 Step-by-step
 ------------
 
-1. Clone this repository on the compute node ("compute-h100-1").  You might want to replace `/mnt/jkjung` with your own directory.
+1. Set environment variables.  Replace the paths below with your own if necessary.
 
    ```shell
-   cd /mnt/jkjung
+   export USER_DIR=/mnt/jkjung
+   export LLAMA2_DATA_DIR=/hps/data/mlperf/llama2
+   export SQSH_DIR=/hps/sqsh
+   ```
+
+   Then clone this repository on the compute node ("compute-h100-1").
+
+   ```shell
+   cd ${USER_DIR}
    git clone https://github.com/jkjung-avt/training_results_v5.0.git
    ```
 
-2. Build the container on the compute node ("compute-h100-1").  You will have to use your NGC API key to pull the base pytorch docker image, e.g. `docker login nvcr.io` or use `~/.config/enroot/.credentials`.  Note that the docker image name "bert_ngc23.09_pyt" is different from that in NVIDIA's original implementation.
+2. Build the container on the compute node ("compute-h100-1").  You will have to use your NGC API key to pull the base PyTorch docker image, e.g. `docker login nvcr.io` or use `~/.config/enroot/.credentials`.
 
    ```shell
    cd training_results_v5.0/Inventec/benchmarks/llama2_70b_lora/implementations/P8000_ngc25.09_nemo/
@@ -56,7 +55,7 @@ Step-by-step
    Start the container with the following command.
 
    ```bash
-   docker run -it --rm --gpus all --network=host --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 -v /mnt/mlperf/llama2_70b_lora_data:/data mlperf-nvidia:llama2_70b_lora_ngc25.09_pyt
+   docker run -it --rm --gpus=all --network=host --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 -v ${LLAMA2_DATA_DIR}:/data mlperf-nvidia:llama2_70b_lora_ngc25.09_pyt
    ```
 
    Then run within the container, under the /workspace/ft-llm directory:
@@ -103,10 +102,10 @@ Step-by-step
 4. Create the SquashFS file from the docker image on the compute node ("compute-h100-1").
 
    ```bash
-   enroot import -o /mnt/sqsh/llama2_70b_lora_ngc25.09_pyt.sqsh dockerd://mlperf-nvidia:llama2_70b_lora_ngc25.09_pyt
+   enroot import -o ${SQSH_DIR}/llama2_70b_lora_ngc25.09_pyt.sqsh dockerd://mlperf-nvidia:llama2_70b_lora_ngc25.09_pyt
    ```
 
-5. Launch training with slurm on the *head* node ("head-p8000-1").  Navigate to the directory where `run.sub` is stored and execute the following.
+5. Launch training with Slurm on the *head* node ("head-p8000-1").  Navigate to the directory where `run.sub` is stored and execute the following.
 
    ```bash
    source env.sh
@@ -116,11 +115,11 @@ Step-by-step
 
    Note:
 
-   * Rename "compute-h100-1" if you are using a different slurm compute node.
+   * Rename "compute-h100-1" if you are using a different Slurm compute node.
    * It's a good idea, before you start `run.sub`, to verify that there is no process occupying the CPUs/GPUs/memory on the compute node.  For example, do `docker ps -a` and `docker rm <CONTAINER ID>` to remove all running/pending containers.
    * You could adjust experiment setting in the `env.sh` script.
 
-   The above `sbatch` command would output the slurm batch job id.  You could track progress of the slurm batch job by checking the corresponding log file.
+   The above `sbatch` command would output the Slurm batch job id.  You could track progress of the slurm batch job by checking the corresponding log file.
 
    ```bash
    tail -f slurm-<SLURM JOB ID>.out
@@ -132,4 +131,4 @@ Step-by-step
 Known Issues
 ------------
 
-* `SLURM_MPI_TYPE`: `pmi2` seems be perform better than `pmix` in out experiments.
+* `SLURM_MPI_TYPE`: `pmi2` seems be perform better than `pmix` in our experiments.

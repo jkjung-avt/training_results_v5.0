@@ -20,8 +20,8 @@ Environment Setup
 * Storage
 
   - Network storage (preferably a High Performance Storage) mounted on both the head and the compute nodes: `/hps` or `/mnt` on "head-p8000-1" and "compute-h100-1", "compute-h100-2", ...
-  - Source code to be checked out in ${USER_DIR} (`/mnt/jkjung`), where the bert benchmark code is found at `training_results_v5.0/Inventec/benchmarks/bert/implementations/P8000_ngc23.09_pytorch`
-  - Data (training data, validation data, checkpoints) in ${BERT_DATA_DIR} (`/hps/data/mlperf/bert`)
+  - Source code to be checked out in ${USER_DIR} (`/mnt/jkjung`), where the retinanet benchmark code is found at `training_results_v5.0/Inventec/benchmarks/retinanet/implementations/P8000_ngc23.09_pytorch`
+  - Data (training data, validation data, checkpoints) in ${RETINANET_DATA_DIR} (`/hps/data/mlperf/retinanet`)
   - Docker container SquashFS file in ${SQSH_DIR} (`/hps/sqsh`)
 
 <a name="steps"></a>
@@ -36,7 +36,7 @@ Step-by-step
    export SQSH_DIR=/hps/sqsh
    ```
 
-   Clone this repository on the compute node ("compute-h100-1").
+   Then clone this repository on the compute node ("compute-h100-1").
 
    ```shell
    cd ${USER_DIR}
@@ -55,7 +55,7 @@ Step-by-step
    Start the container with the following command.
 
    ```bash
-   docker run -it --rm --gpus=all --ipc=host -v ${RETINANET_DATA_DIR}:/workspace/ssd_dataset mlperf-nvidia:retinanet_ngc25.10_pyt
+   docker run -it --rm --gpus=all --network=host --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 -v ${RETINANET_DATA_DIR}:/workspace/ssd_dataset mlperf-nvidia:retinanet_ngc25.10_pyt
    ```
 
    Then run within the container:
@@ -139,5 +139,4 @@ Step-by-step
 Known Issues
 ------------
 
-* `SLURM_MPI_TYPE`: `pmi2` works but `pmix` doesn't.
-   - This has to do with the version of Slurm being used.
+* `SLURM_MPI_TYPE`: `pmi2` seems be perform better than `pmix` in our experiments.
