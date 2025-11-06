@@ -11,7 +11,7 @@ export EXTRA_PARAMS=${EXTRA_PARAMS:-'--jit --frozen-bn-opt --frozen-bn-fp16 --ap
 ## System run params
 export DGXNNODES=1
 export DGXSYSTEM=$(basename $(readlink -f ${BASH_SOURCE[0]}) | sed 's/^config_//' | sed 's/\.sh$//' )
-export WALLTIME_RUNANDTIME=33
+export WALLTIME_RUNANDTIME=120
 ## Set clocks and walltime for maxQ and minEDP runs
 if [[ "${SET_MAXQ_CLK:-0}" == "1" ]]; then
   export MAXQ_CLK=1260

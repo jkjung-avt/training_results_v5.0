@@ -46,8 +46,8 @@ Step-by-step
 2. Build the container on the compute node ("compute-h100-1").  You will have to use your NGC API key to pull the base PyTorch docker image, e.g. `docker login nvcr.io` or use `~/.config/enroot/.credentials`.  Note that the docker image name "bert_ngc23.09_pyt" is different from that in NVIDIA's original implementation.
 
    ```shell
-   cd training_results_v5.0/Inventec/benchmarks/retinanet/implementations/P8000_ngc25.04_pytorch/
-   docker build -t mlperf-nvidia:retinanet_ngc25.04_pyt .
+   cd training_results_v5.0/Inventec/benchmarks/retinanet/implementations/P8000_ngc25.10_pytorch/
+   docker build -t mlperf-nvidia:retinanet_ngc25.10_pyt .
    ```
 
 3. Prepare dataset on the compute node ("compute-h100-1").
@@ -55,14 +55,13 @@ Step-by-step
    Start the container with the following command.
 
    ```bash
-   docker run -it --rm --gpus=all --ipc=host -v ${RETINANET_DATA_DIR}:/workspace/ssd_dataset mlperf-nvidia:retinanet_ngc25.04_pyt
+   docker run -it --rm --gpus=all --ipc=host -v ${RETINANET_DATA_DIR}:/workspace/ssd_dataset mlperf-nvidia:retinanet_ngc25.10_pyt
    ```
 
    Then run within the container:
 
    ```bash
    cd /workspace/ssd
-   pip install opencv_python_headless==4.11.0.86
    pip install fiftyone==1.2.0
    export FIFTYONE_DATASET_ZOO_DIR=/workspace/ssd_dataset
    ./public-scripts/download_openimages_mlperf.sh -d /workspace/ssd_dataset/open-images-v6
@@ -108,10 +107,10 @@ Step-by-step
    ./public-scripts/download_backbone.sh
    ```
 
-5. Create the SquashFS file from the docker image on the compute node ("compute-h100-1").  The created `${SQSH_DIR}/retinanet_ngc25.04_pyt.sqsh` file is needed for running the experiment with Slurm.
+5. Create the SquashFS file from the docker image on the compute node ("compute-h100-1").  The created `${SQSH_DIR}/retinanet_ngc25.10_pyt.sqsh` file is needed for running the experiment with Slurm.
 
    ```bash
-   enroot import -o ${SQSH_DIR}/retinanet_ngc25.04_pyt.sqsh dockerd://mlperf-nvidia:retinanet_ngc25.04_pyt
+   enroot import -o ${SQSH_DIR}/retinanet_ngc25.10_pyt.sqsh dockerd://mlperf-nvidia:retinanet_ngc25.10_pyt
    ```
 
 6. Launch training with Slurm on the *head* node ("head-p8000-1").  Navigate to the directory where `run.sub` is stored and execute the following.

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-ARG FROM_IMAGE_NAME=nvcr.io/nvidia/pytorch:25.04-py3
+ARG FROM_IMAGE_NAME=nvcr.io/nvidia/pytorch:25.10-py3
 
 FROM ${FROM_IMAGE_NAME} AS base-image
 
@@ -69,8 +69,8 @@ ARG TORCH_CUDNN_V8_API_ENABLED=1
 ENV MAX_JOBS=${MAX_JOBS}
 ENV TORCH_CUDNN_V8_API_ENABLED=${TORCH_CUDNN_V8_API_ENABLED}
 
-# Apex
-ARG APEX_REVISION=SKIP
+# Apex: replace "SKIP" with "90055a9188f907e1fd78d9099aa45252efd62efb" (2025-11-05 snapshot)
+ARG APEX_REVISION=90055a9188f907e1fd78d9099aa45252efd62efb
 ENV CUSTOM_APEX_REVISION=${APEX_REVISION}
 
 RUN if [ "${APEX_REVISION}" != SKIP ]; then \
@@ -79,7 +79,7 @@ RUN if [ "${APEX_REVISION}" != SKIP ]; then \
       echo APEX_REVISION=${APEX_REVISION} && \
       git checkout ${APEX_REVISION} && \
       echo APEX_COMMIT_HASH=$(git rev-parse HEAD) && \
-      CFLAGS="-g0" pip install -v --no-build-isolation --no-cache-dir --disable-pip-version-check --config-settings "--build-option=--cpp_ext --cuda_ext --focal_loss --fused_conv_bias_relu" . \
+      APEX_CPP_EXT=1 APEX_CUDA_EXT=1 APEX_FOCAL_LOSS=1 APEX_FUSED_CONV_BIAS_RELU=1 pip install -v --no-build-isolation . \
     ; fi
 
 # Install dependencies for system configuration logger
@@ -93,7 +93,6 @@ WORKDIR /workspace/ssd
 # Copy code
 COPY . .
 
-
 # Remove the container's pycocotools in favor of the nvidia optimized version (installed from requirements.txt)
 RUN pip uninstall -y pycocotools
 
@@ -103,16 +102,3 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy DALI box iou and proposal matcher
 COPY --from=dali-box-iou-builder /workspace/csrc/dali_box_iou/build/lib_box_iou.so /usr/local/lib/lib_box_iou.so
 COPY --from=dali-proposal-matcher-builder /workspace/csrc/dali_proposal_matcher/build/lib_proposal_matcher.so /usr/local/lib/lib_proposal_matcher.so
-################################################################################
-
-# Install NCCL 2.25.1:
-ARG NCCL_REVISION=v2.25.1-1
-RUN export DEBIAN_FRONTEND=noninteractive &&        \
-    apt-get update &&                               \
-    apt-get remove -y libnccl2 &&                   \
-    git clone https://github.com/NVIDIA/nccl.git && \
-    cd nccl &&                                      \
-    echo "NCCL_REVISION=${NCCL_REVISION}" &&      \
-    git checkout "${NCCL_REVISION}" &&             \
-    make -j24 install
-ENV NCCL_VERSION="${NCCL_VERSION}-fix-${NCCL_REVISION}"
