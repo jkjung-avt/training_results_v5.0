@@ -27,3 +27,11 @@ export DGXNGPU=8
 export DGXSOCKETCORES=48
 export DGXNSOCKET=2
 export DGXHT=2  # HT is on is 2, HT off is 1
+
+# Inventec stuffs
+export MLPERF_SUBMITTER="Inventec Corporation"
+export MLPERF_SUBMISSION_ORG="Inventec Corporation"
+export MLPERF_SYSTEM_NAME="P8000H100"
+export MLPERF_SUBMISSION_PLATFORM="Inventec P8000H100"
+export MLPERF_STATUS="research"
+export GPU_ARCH=h
