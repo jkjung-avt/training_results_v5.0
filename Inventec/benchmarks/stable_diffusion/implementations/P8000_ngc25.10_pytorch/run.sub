@@ -13,8 +13,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+#SBATCH --job-name stable_diffusion
 #SBATCH --exclusive
 #SBATCH --mem=0
+#SBATCH --gpus-per-node=8
 
 set -euxo pipefail
 
@@ -22,7 +24,7 @@ echo "PROLOG_START $(date +%s)"
 
 # Vars without defaults
 : "${DGXSYSTEM:?DGXSYSTEM not set}"
-: "${CONT:?CONT not set}"
+: "${CONT_FILE:?CONT_FILE not set}"
 : "${WALLTIME_RUNANDTIME:?WALLTIME_RUNANDTIME not set}"
 
 # Vars with defaults

@@ -1,4 +1,4 @@
-_cont_mounts="${LOGDIR}:/results"
+_cont_mounts="/dev/infiniband:/dev/infiniband,${LOGDIR}:/results"
 
 if [[ "${USE_SYNTHETIC_DATA:-0}" -eq 0 ]]; then
     _cont_mounts="${_cont_mounts},${DATADIR}:/datasets,${COCODIR}:/coco2014/,${CHECKPOINT_CLIP}:/checkpoints/clip,${CHECKPOINT_FID}:/checkpoints/inception,${CHECKPOINT_SD}:/checkpoints/sd"
