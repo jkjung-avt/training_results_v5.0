@@ -50,7 +50,7 @@ RUN pip uninstall -y megatron-core && \
     pip install . && \
     cd megatron/core/datasets && \
     make
-ENV PYTHONPATH="${PYTHONPATH}:/workspace/Megatron-LM"
+ENV PYTHONPATH="/workspace/Megatron-LM"
 
 ARG TE_REVISION=SKIP
 ENV CUSTOM_TE_REVISION=${TE_REVISION}
