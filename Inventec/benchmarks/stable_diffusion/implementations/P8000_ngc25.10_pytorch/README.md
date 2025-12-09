@@ -32,7 +32,7 @@ Step-by-step
 
    ```shell
    export USER_DIR=/mnt/jkjung
-   export SD_DATA_DIR=/hps/data/mlperf/stable_difussion
+   export SD_DATA_DIR=/hps/data/mlperf/stable_diffusion
    export SQSH_DIR=/hps/sqsh
    ```
 
@@ -47,7 +47,7 @@ Step-by-step
 
    ```shell
    cd training_results_v5.0/Inventec/benchmarks/stable_diffusion/implementations/P8000_ngc25.04_pytorch/
-   docker build -t mlperf-nvidia:sd_ngc25.04_pyt .
+   docker build -t mlperf-inventec:sd_ngc25.04_pyt .
    ```
 
 3. Prepare dataset on the compute node ("compute-h100-1").
@@ -60,7 +60,7 @@ Step-by-step
    Start the container with the following command.
 
    ```bash
-   docker run -it --rm --gpus=all --network=host --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 -v ${SD_DATA_DIR}/datasets:/datasets -v ${SD_DATA_DIR}/checkpoints:/checkpoints mlperf-nvidia:sd_ngc25.04_pyt
+   docker run -it --rm --gpus=all --network=host --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 -v ${SD_DATA_DIR}/datasets:/datasets -v ${SD_DATA_DIR}/checkpoints:/checkpoints mlperf-inventec:sd_ngc25.04_pyt
    ```
 
    Then run the following within the container to download the LAION 400M preprocessed moments dataset.  Total download size: ~831GB.  The script would verify md5 checksums of all downloaded files (00000.tar ~ 00831.tar) in the end.
@@ -122,7 +122,7 @@ Step-by-step
 6. Create the SquashFS file from the docker image on the compute node ("compute-h100-1").  The created `${SQSH_DIR}/sd_ngc25.04_pyt.sqsh` file is needed for running the experiment with Slurm.
 
    ```bash
-   enroot import -o ${SQSH_DIR}/sd_ngc25.04_pyt.sqsh dockerd://mlperf-nvidia:sd_ngc25.04_pyt
+   enroot import -o ${SQSH_DIR}/sd_ngc25.04_pyt.sqsh dockerd://mlperf-inventec:sd_ngc25.04_pyt
    ```
 
 7. Launch training with Slurm on the *head* node ("head-p8000-1").  Navigate to the directory where `run.sub` is stored and execute the following.
