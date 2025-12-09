@@ -27,13 +27,6 @@ done
 mkdir -p ${OUTPUT_DIR}
 cd ${OUTPUT_DIR}
 
-
-for i in {00000..00831}; do wget -O ${OUTPUT_DIR}/${i}.tar -c "https://cloud.mlcommons.org/index.php/s/training_stable_diffusion/download?path=/datasets/laion-400m/moments-webdataset-filtered&files=${i}.tar"; done
-
-wget -O ${OUTPUT_DIR}/sha512sums.txt -c "https://cloud.mlcommons.org/index.php/s/training_stable_diffusion/download?path=/datasets/laion-400m/moments-webdataset-filtered&files=sha512sums.txt"
-
-# get only lines ending with ".tar":
-grep -x '.*\.tar$' ${OUTPUT_DIR}/sha512sums.txt > ${OUTPUT_DIR}/sha512sums_tar_files_only.txt
-
-# check .tar hashes (note: this is slow!):
-sha512sum --quiet -c ${OUTPUT_DIR}/sha512sums_tar_files_only.txt
+# Note the following script will verify checksums for all downloaded tar
+# files: 00000.tar ~ 00831.tar
+bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) -d ${OUTPUT_DIR} https://training.mlcommons-storage.org/metadata/stable-diffusion-laion-400m-filtered-moments-dataset.uri
