@@ -77,20 +77,20 @@ Step-by-step
    bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) -d datasets/coco2014 https://training.mlcommons-storage.org/metadata/stable-diffusion-coco2014-validation-stats-dataset.uri
    bash scripts/datasets/coco-2014-validation-download.sh
    bash scripts/datasets/coco-2014-validation-split-resize.sh
-```
+   ```
 
 4. Download checkpoints on the compute node ("compute-h100-1").
 
    Download checkpoint of the Stable Diffusion model.  This component leverages StabilityAI's 512-base-ema.ckpt checkpoint from HuggingFace.  While the checkpoint includes weights for the UNet, VAE, and OpenCLIP text embedder, the UNet weights are not used and are discarded when loading the weights.  Download size: ~4.9GB.
 
    ```bash
-   bash scripts/checkpoints/download_sd.sh --output-dir /checkpoints/sd
+   bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) -d /checkpoints/sd https://training.mlcommons-storage.org/metadata/stable-diffusion-sd-checkpoint.uri
    ```
 
    Download checkpoint of the Inception network, which is employed during validation to compute the Fréchet Inception Distance (FID) score.  Download size: <100MB.
 
    ```bash
-   bash scripts/checkpoints/download_inception.sh --output-dir /checkpoints/inception
+   bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) -d /checkpoints/inception https://training.mlcommons-storage.org/metadata/stable-diffusion-inception-checkpoint.uri
    ```
 
    Download checkpoint of the OpenCLIP ViT-H-14 Model.  This model is utilized for the computation of the CLIP score.  Download size: ~3.7GB.
@@ -100,7 +100,7 @@ Step-by-step
    ```
 5. Preprocess Laion 400m dataset
 
-   This script creates a version of dataset that contains encoded CLIP captions.  It requires single node with preferably 8 GPUs and 2.7TB space for outputs.  There are 832 shards to process.  Splitting the work across 8 GPUs and assuming each fragment takes ~100 seconds to process, the total time needed is estimated at ~3 hours.
+   This script creates a version of dataset that contains encoded CLIP captions.  It requires single node with preferably 8 GPUs and 2.7TB space for outputs.  There are 832 shards to process, with work split across 8 GPUs.  The total time needed is ~1 hour.
 
    ```bash
    bash scripts/datasets/laion400m-encode-captions.sh
@@ -117,7 +117,7 @@ Step-by-step
    /checkpoints/sd/512-base-ema.ckpt  # 4.9G
    ```
 
-   Exit the container.
+   You should exit the Docker container for the rest of the steps.
 
 6. Create the SquashFS file from the docker image on the compute node ("compute-h100-1").  The created `${SQSH_DIR}/sd_ngc25.04_pyt.sqsh` file is needed for running the experiment with Slurm.
 
