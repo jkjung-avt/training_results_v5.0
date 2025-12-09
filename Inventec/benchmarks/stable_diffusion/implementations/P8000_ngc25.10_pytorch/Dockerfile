@@ -50,10 +50,10 @@ RUN pip uninstall -y megatron-core && \
     pip install . && \
     cd megatron/core/datasets && \
     make
-ENV PYTHONPATH "${PYTHONPATH}:/workspace/Megatron-LM"
+ENV PYTHONPATH="${PYTHONPATH}:/workspace/Megatron-LM"
 
 ARG TE_REVISION=SKIP
-ENV CUSTOM_TE_REVISION ${TE_REVISION}
+ENV CUSTOM_TE_REVISION=${TE_REVISION}
 RUN if [ "${TE_REVISION}" != SKIP ]; then \
     git clone https://github.com/NVIDIA/TransformerEngine.git transformerengine && \
     cd transformerengine && \
@@ -65,7 +65,7 @@ RUN if [ "${TE_REVISION}" != SKIP ]; then \
     ; fi
 
 ARG APEX_REVISION=SKIP
-ENV CUSTOM_APEX_REVISION ${APEX_REVISION}
+ENV CUSTOM_APEX_REVISION=${APEX_REVISION}
 RUN if [ "${APEX_REVISION}" != SKIP ]; then \
     git clone https://github.com/NVIDIA/apex.git && \
     cd apex && \
