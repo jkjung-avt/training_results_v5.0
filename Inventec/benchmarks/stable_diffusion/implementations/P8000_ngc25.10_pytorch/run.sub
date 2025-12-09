@@ -128,7 +128,7 @@ srun --ntasks-per-node=1 mkdir -p "${LOGDIR}"
 
 # Setup container
 echo MELLANOX_VISIBLE_DEVICES="${MELLANOX_VISIBLE_DEVICES:-}"
-srun --ntasks-per-node=1 --container-image="${CONT}" --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" true
+srun --ntasks-per-node=1 --container-image="${CONT_FILE}" --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" true
 
 # print info about infiniband device and gpu pcie
 srun -N1 -n1 --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" ibv_devinfo --list
@@ -201,7 +201,7 @@ for _experiment_index in $(seq -w 1 "${NEXP}"); do
 
     (
         echo "Beginning trial ${_experiment_index} of ${NEXP}"
-        echo ":::DLPAL ${CONT} ${SLURM_JOB_ID} ${SLURM_JOB_NUM_NODES} ${SLURM_JOB_NODELIST} ${MLPERF_CLUSTER_NAME} ${DGXSYSTEM}"
+        echo ":::DLPAL ${CONT_FILE} ${SLURM_JOB_ID} ${SLURM_JOB_NUM_NODES} ${SLURM_JOB_NODELIST} ${MLPERF_CLUSTER_NAME} ${DGXSYSTEM}"
         echo ":::SYSJSON $(srun -N1 -n1 --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" mlperf-sysjson.sh)"
         srun -N1 -n1 --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" bash -c 'echo ":::GITCOMMITID ${GIT_COMMIT_ID} ${LAUNCHER_GIT_COMMIT_ID}"'
 
