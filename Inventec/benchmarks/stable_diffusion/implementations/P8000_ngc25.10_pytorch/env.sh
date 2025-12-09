@@ -1,8 +1,8 @@
 : "${SD_DATA_DIR:?ERROR: SD_DATA_DIR not set}"
 : "${SQSH_DIR:?ERROR: SQSH_DIR not set}"
 
-export DATADIR="${SD_DATA_DIR}/datasets"
-export COCODIR="${SD_DATA_DIR}/datasets"
+export DATADIR="${SD_DATA_DIR}/datasets/laion-400m/webdataset-moments-filtered-encoded"
+export COCODIR="${SD_DATA_DIR}/datasets/coco2014"
 export CHECKPOINT_CLIP="${SD_DATA_DIR}/checkpoints/clip"
 export CHECKPOINT_FID="${SD_DATA_DIR}/checkpoints/inception"
 export CHECKPOINT_SD="${SD_DATA_DIR}/checkpoints/sd"

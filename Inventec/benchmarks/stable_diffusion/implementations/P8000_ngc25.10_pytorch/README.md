@@ -74,7 +74,8 @@ Step-by-step
 
    ```bash
    bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) -d /datasets/coco2014 https://training.mlcommons-storage.org/metadata/stable-diffusion-coco2014-validation-prompts-dataset.uri
-   bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) -d datasets/coco2014 https://training.mlcommons-storage.org/metadata/stable-diffusion-coco2014-validation-stats-dataset.uri
+   bash <(curl -s https://raw.githubusercontent.com/mlcommons/r2-downloader/refs/heads/main/mlc-r2-downloader.sh) -d /datasets/coco2014 https://training.mlcommons-storage.org/metadata/stable-diffusion-coco2014-validation-stats-dataset.uri
+   mv /datasets/coco2014/val2014_30k_stats.npz /datasets/coco2014/val2014_512x512_30k_stats.npz
    bash scripts/datasets/coco-2014-validation-download.sh
    bash scripts/datasets/coco-2014-validation-split-resize.sh
    ```
