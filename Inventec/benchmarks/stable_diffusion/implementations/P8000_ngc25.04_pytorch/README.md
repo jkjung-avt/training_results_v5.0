@@ -143,7 +143,7 @@ Step-by-step
    The above `sbatch` command would output the Slurm batch job id.  You could track progress of the Slurm batch job by checking the corresponding log file.
 
    ```bash
-   tail -f slurm-<SLURM JOB ID>.out
+   tail -fn +1 slurm-<SLURM JOB ID>.out
    ```
 
 8. Check experiment results in the `results` folder.
