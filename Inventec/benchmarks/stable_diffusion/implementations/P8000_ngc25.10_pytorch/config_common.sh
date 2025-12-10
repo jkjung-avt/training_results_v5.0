@@ -66,7 +66,10 @@ export USE_TE_DPA=${USE_TE_DPA:-False}
 export USE_CUDNN_LAYER_NORM=${USE_CUDNN_LAYER_NORM:-True}
 export USE_TORCH_SCHED=${USE_TORCH_SCHED:-False}
 export USE_DIST_OPTIMIZER=${USE_DIST_OPTIMIZER:-True}
-export APEX_GROUP_NORM_BPROP_SM_MARGIN=32
+
+# JK: The following line is commented out due to "NotImplementedError:
+# sm_margin is not supported for GroupNorm v1" for APEX Group Norm.
+##export APEX_GROUP_NORM_BPROP_SM_MARGIN=32
 
 if [[ "${USE_TORCH_SCHED,,}" == "true"  ]]; then
     export CUDA_DEVICE_MAX_CONNECTIONS=128
