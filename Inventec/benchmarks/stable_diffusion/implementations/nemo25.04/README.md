@@ -130,7 +130,7 @@ Step-by-step
 
    ```bash
    source env.sh
-   source config_P8000H100_1x8x32.sh
+   source config_P8000IG6H100_1x8x32.sh
    sbatch -w compute-h100-1 --time=${WALLTIME} run.sub
    ```
 
