@@ -20,7 +20,7 @@ Environment Setup
 * Storage
 
   - Network storage (preferably a High Performance Storage) mounted on both the head and the compute nodes: `/hps` or `/mnt` on "head-p8000-1" and "compute-h100-1", "compute-h100-2", ...
-  - Source code to be checked out in ${USER_DIR} (`/mnt/jkjung`), where the stable_diffusion benchmark code is found at `training_results_v5.0/Inventec/benchmarks/stable_diffusion/implementations/P8000_ngc25.04_pytorch`
+  - Source code to be checked out in ${USER_DIR} (`/mnt/jkjung`), where the stable_diffusion benchmark code is found at `training_results_v5.0/Inventec/benchmarks/stable_diffusion/implementations/nemo25.04
   - Data (training data, validation data, checkpoints) in ${SD_DATA_DIR} (`/hps/data/mlperf/stable_diffusion`)
   - Docker container SquashFS file in ${SQSH_DIR} (`/hps/sqsh`)
 
@@ -46,8 +46,8 @@ Step-by-step
 2. Build the container on the compute node ("compute-h100-1").  You will have to use your NGC API key to pull the base PyTorch docker image, e.g. `docker login nvcr.io` or use `~/.config/enroot/.credentials`.
 
    ```shell
-   cd training_results_v5.0/Inventec/benchmarks/stable_diffusion/implementations/P8000_ngc25.04_pytorch/
-   docker build -t mlperf-inventec:sd_ngc25.04_pyt .
+   cd training_results_v5.0/Inventec/benchmarks/stable_diffusion/implementations/nemo25.04/
+   docker build -t mlperf-inventec:sd_nemo25.04 .
    ```
 
 3. Prepare dataset on the compute node ("compute-h100-1").
@@ -60,7 +60,7 @@ Step-by-step
    Start the container with the following command.
 
    ```bash
-   docker run -it --rm --gpus=all --network=host --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 -v ${SD_DATA_DIR}/datasets:/datasets -v ${SD_DATA_DIR}/checkpoints:/checkpoints mlperf-inventec:sd_ngc25.04_pyt
+   docker run -it --rm --gpus=all --network=host --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 -v ${SD_DATA_DIR}/datasets:/datasets -v ${SD_DATA_DIR}/checkpoints:/checkpoints mlperf-inventec:sd_nemo25.04
    ```
 
    Then run the following within the container to download the LAION 400M preprocessed moments dataset.  Total download size: ~831GB.  The script would verify md5 checksums of all downloaded files (00000.tar ~ 00831.tar) in the end.
@@ -120,10 +120,10 @@ Step-by-step
 
    You should exit the Docker container for the rest of the steps.
 
-6. Create the SquashFS file from the docker image on the compute node ("compute-h100-1").  The created `${SQSH_DIR}/sd_ngc25.04_pyt.sqsh` file is needed for running the experiment with Slurm.
+6. Create the SquashFS file from the docker image on the compute node ("compute-h100-1").  The created `${SQSH_DIR}/sd_nemo25.04.sqsh` file is needed for running the experiment with Slurm.
 
    ```bash
-   enroot import -o ${SQSH_DIR}/sd_ngc25.04_pyt.sqsh dockerd://mlperf-inventec:sd_ngc25.04_pyt
+   enroot import -o ${SQSH_DIR}/sd_nemo25.04.sqsh dockerd://mlperf-inventec:sd_nemo25.04
    ```
 
 7. Launch training with Slurm on the *head* node ("head-p8000-1").  Navigate to the directory where `run.sub` is stored and execute the following.
