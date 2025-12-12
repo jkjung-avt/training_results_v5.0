@@ -31,7 +31,7 @@ source $(dirname ${BASH_SOURCE[0]})/config_common.sh
 # Inventec stuffs
 export MLPERF_SUBMITTER="Inventec Corporation"
 export MLPERF_SUBMISSION_ORG="Inventec Corporation"
-export MLPERF_SYSTEM_NAME="P8000H100"
-export MLPERF_SUBMISSION_PLATFORM="Inventec P8000H100"
+export MLPERF_SYSTEM_NAME="P8000IG6H100"
+export MLPERF_SUBMISSION_PLATFORM="Inventec P8000IG6H100"
 export MLPERF_STATUS="research"
 export GPU_ARCH=h
