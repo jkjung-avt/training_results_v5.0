@@ -14,9 +14,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+#SBATCH --job-name mlperf-dlrm:hugectr
 #SBATCH --exclusive
 #SBATCH --mem=0
-#SBATCH --job-name mlperf-dlrm:hugectr
+#SBATCH --gpus-per-node=8
 #SBATCH -t 00:30:00
 
 set -euxo pipefail
@@ -25,7 +26,7 @@ echo "PROLOG_START $(date +%s)"
 
 # Vars without defaults
 : "${DGXSYSTEM:?DGXSYSTEM not set}"
-: "${CONT:?CONT not set}"
+: "${CONT_FILE:?CONT_FILE not set}"
 : "${DATADIR:?DATADIR not set}"
 : "${WALLTIME_RUNANDTIME:?WALLTIME_RUNANDTIME not set}"
 
@@ -86,7 +87,7 @@ mounts_to_verify="TRAIN_DATA_BIN:/data/train_data.bin VAL_DATA_BIN:/data_val/val
 
 # Setup container
 echo MELLANOX_VISIBLE_DEVICES="${MELLANOX_VISIBLE_DEVICES:-}"
-srun --mpi="${SLURM_MPI_TYPE:-pmix}" --ntasks-per-node=1 --container-image="${CONT}" --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" true
+srun --mpi="${SLURM_MPI_TYPE:-pmix}" --ntasks-per-node=1 --container-image="${CONT_FILE}" --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" true
 srun -N1 -n1 --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" ibv_devinfo --list
 srun -N1 -n1 --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" nvidia-smi topo -m
 
@@ -175,7 +176,7 @@ for _experiment_index in $(seq -w 1 "${NEXP}"); do
     echo "EXPERIMENT_START $(date +%s)"
 
     (
-        echo ":::DLPAL ${CONT} ${SLURM_JOB_ID} ${SLURM_JOB_NUM_NODES} ${SLURM_JOB_NODELIST} ${MLPERF_CLUSTER_NAME} ${DGXSYSTEM}"
+        echo ":::DLPAL ${CONT_FILE} ${SLURM_JOB_ID} ${SLURM_JOB_NUM_NODES} ${SLURM_JOB_NODELIST} ${MLPERF_CLUSTER_NAME} ${DGXSYSTEM}"
         echo ":::SYSJSON $(srun -N1 -n1 --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" mlperf-sysjson.sh)"
         srun -N1 -n1 --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" bash -c 'echo ":::GITCOMMITID ${GIT_COMMIT_ID} ${LAUNCHER_GIT_COMMIT_ID}"'
 

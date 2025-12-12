@@ -1,6 +1,6 @@
 : "${DATADIR_VAL:=${DATADIR}}"
 
-_cont_mounts="${DATADIR}:/data,${DATADIR_VAL}:/data_val,${LOGDIR}:/results"
+_cont_mounts="/dev/infiniband:/dev/infiniband,${DATADIR}:/data,${DATADIR_VAL}:/data_val,${LOGDIR}:/results"
 cont_mounts_to_verify="'/data', '/data_val'"
 
 if [[ -n "${APILOG_DIR:-}" ]]; then
