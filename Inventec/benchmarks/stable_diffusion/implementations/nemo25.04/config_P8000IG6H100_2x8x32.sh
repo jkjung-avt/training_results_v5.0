@@ -14,7 +14,7 @@
 
 export DGXNNODES=2
 export DGXNGPU=8
-export BATCHSIZE=64
+export BATCHSIZE=32
 source $(dirname ${BASH_SOURCE[0]})/config_gbs_256.sh
 
 export FLASH_ATTENTION=${FLASH_ATTENTION:-False}
