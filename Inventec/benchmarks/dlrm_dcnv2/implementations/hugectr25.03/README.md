@@ -85,7 +85,7 @@ Step-by-step
 4. Create the SquashFS file from the docker image on the compute node ("compute-h100-1").
 
    ```bash
-   enroot import -o ${SQSH_DIR}/dlrm_hugectro25.03.sqsh dockerd://mlperf-inventec:dlrm_hugectr25.03
+   enroot import -o ${SQSH_DIR}/dlrm_hugectr25.03.sqsh dockerd://mlperf-inventec:dlrm_hugectr25.03
    ```
 
 5. Launch training with Slurm on the *head* node ("head-p8000-1").  Navigate to the directory where `run.sub` is stored and execute the following.
