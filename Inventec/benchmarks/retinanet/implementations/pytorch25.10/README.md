@@ -47,7 +47,7 @@ Step-by-step
 
    ```shell
    cd training_results_v5.0/Inventec/benchmarks/retinanet/implementations/pytorch25.10/
-   docker build -t mlperf-nvidia:retinanet_ngc25.10_pyt .
+   docker build -t mlperf-inventec:retinanet_pytorch25.10 .
    ```
 
 3. Prepare dataset on the compute node ("compute-h100-1").
@@ -55,7 +55,7 @@ Step-by-step
    Start the container with the following command.
 
    ```bash
-   docker run -it --rm --gpus=all --network=host --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 -v ${RETINANET_DATA_DIR}:/workspace/ssd_dataset mlperf-nvidia:retinanet_ngc25.10_pyt
+   docker run -it --rm --gpus=all --network=host --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 -v ${RETINANET_DATA_DIR}:/workspace/ssd_dataset mlperf-inventec:retinanet_pytorch25.10
    ```
 
    Then run within the container:
@@ -109,10 +109,10 @@ Step-by-step
    ./public-scripts/download_backbone.sh
    ```
 
-5. Create the SquashFS file from the docker image on the compute node ("compute-h100-1").  The created `${SQSH_DIR}/retinanet_ngc25.10_pyt.sqsh` file is needed for running the experiment with Slurm.
+5. Create the SquashFS file from the docker image on the compute node ("compute-h100-1").  The created `${SQSH_DIR}/retinanet_pytorch25.10.sqsh` file is needed for running the experiment with Slurm.
 
    ```bash
-   enroot import -o ${SQSH_DIR}/retinanet_ngc25.10_pyt.sqsh dockerd://mlperf-nvidia:retinanet_ngc25.10_pyt
+   enroot import -o ${SQSH_DIR}/retinanet_pytorch25.10.sqsh dockerd://mlperf-inventec:retinanet_pytorch25.10
    ```
 
 6. Launch training with Slurm on the *head* node ("head-p8000-1").  Navigate to the directory where `run.sub` is stored and execute the following.
