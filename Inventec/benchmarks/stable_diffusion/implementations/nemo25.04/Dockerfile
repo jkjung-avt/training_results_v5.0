@@ -61,7 +61,7 @@ RUN if [ "${TE_REVISION}" != SKIP ]; then \
     echo TE_COMMIT_HASH=$(git rev-parse HEAD) && \
     echo $(git rev-parse HEAD) > /TE_COMMIT_HASH.env && \
     git submodule init && git submodule update && \
-    NVTE_CUDA_ARCHS="90" NVTE_FRAMEWORK=pytorch MPI_HOME=/usr/local/mpi pip install --force-reinstall --no-deps . \
+    NVTE_CUDA_ARCHS="90;100" NVTE_FRAMEWORK=pytorch MPI_HOME=/usr/local/mpi pip install --force-reinstall --no-deps . \
     ; fi
 
 ARG APEX_REVISION=25.04
@@ -72,7 +72,7 @@ RUN if [ "${APEX_REVISION}" != SKIP ]; then \
     git checkout ${APEX_REVISION} && \
     echo APEX_REVISION=${APEX_REVISION} && \
     echo APEX_COMMIT_HASH=$(git rev-parse HEAD) && \
-    TORCH_CUDA_ARCH_LIST="9.0" CFLAGS="-g0" NVCC_APPEND_FLAGS="--threads 8" pip install -v --no-build-isolation --no-cache-dir --disable-pip-version-check --config-settings "--build-option=--cpp_ext --cuda_ext --deprecated_fused_adam --distributed_adam --group_norm --parallel 8" . && \
+    TORCH_CUDA_ARCH_LIST="9.0 10.0" CFLAGS="-g0" NVCC_APPEND_FLAGS="--threads 8" pip install -v --no-build-isolation --no-cache-dir --disable-pip-version-check --config-settings "--build-option=--cpp_ext --cuda_ext --deprecated_fused_adam --distributed_adam --group_norm --parallel 8" . && \
     rm -rf build \
     ; fi
 

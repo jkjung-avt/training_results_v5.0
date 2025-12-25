@@ -60,7 +60,7 @@ RUN if [ "${TE_REVISION}" != SKIP ]; then \
     echo TE_COMMIT_HASH=$(git rev-parse HEAD) && \
     echo $(git rev-parse HEAD) > /TE_COMMIT_HASH.env && \
     git submodule init && git submodule update && \
-    NVTE_CUDA_ARCHS="100" NVTE_UB_WITH_MPI=1 NVTE_FRAMEWORK=pytorch NVTE_WITH_USERBUFFERS=1 MPI_HOME=/usr/local/mpi pip install --force-reinstall --no-deps . \
+    NVTE_CUDA_ARCHS="90;100" NVTE_UB_WITH_MPI=1 NVTE_FRAMEWORK=pytorch NVTE_WITH_USERBUFFERS=1 MPI_HOME=/usr/local/mpi pip install --force-reinstall --no-deps . \
     ; fi
 
 ## fix opencc
