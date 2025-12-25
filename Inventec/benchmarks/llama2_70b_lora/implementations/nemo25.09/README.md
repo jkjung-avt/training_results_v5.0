@@ -1,4 +1,4 @@
-# MLPerf LLama2-70B LoRA PyTorch Training on Inventec P8000/P9000 GPU Servers
+# MLPerf LLama2-70B LoRA Training on Inventec P8000/P9000 GPU Servers
 
 Table of contents
 -----------------
@@ -20,7 +20,7 @@ Environment Setup
 * Storage
 
   - Network storage (preferably a High Performance Storage) mounted on both the head and the compute nodes: `/hps` or `/mnt` on "head-p8000-1" and "compute-h100-1", "compute-h100-2", ...
-  - Source code to be checked out in ${USER_DIR} (`/mnt/jkjung`), where the llama2_70b_lora benchmark code is found at `training_results_v5.0/Inventec/benchmarks/llama2_70b_lora/implementations/P8000_ngc25.09_nemo
+  - Source code to be checked out in ${USER_DIR} (`/mnt/jkjung`), where the llama2_70b_lora benchmark code is found at `training_results_v5.0/Inventec/benchmarks/llama2_70b_lora/implementations/nemo25.09
   - Data (training data, validation data, checkpoints) in ${LLAMA2_DATA_DIR} (`/hps/data/mlperf/llama2`)
   - Docker container SquashFS file in ${SQSH_DIR} (`/hps/sqsh`)
 
@@ -46,8 +46,8 @@ Step-by-step
 2. Build the container on the compute node ("compute-h100-1").  You will have to use your NGC API key to pull the base PyTorch docker image, e.g. `docker login nvcr.io` or use `~/.config/enroot/.credentials`.
 
    ```shell
-   cd training_results_v5.0/Inventec/benchmarks/llama2_70b_lora/implementations/P8000_ngc25.09_nemo/
-   docker build -t mlperf-nvidia:llama2_70b_lora_ngc25.09_pyt .
+   cd training_results_v5.0/Inventec/benchmarks/llama2_70b_lora/implementations/nemo25.09/
+   docker build -t mlperf-inventec:llama2_70b_lora_nemo25.09 .
    ```
 
 3. Download dataset, download model, and do preprocessing on the compute node ("compute-h100-1").
@@ -55,7 +55,7 @@ Step-by-step
    Start the container with the following command.
 
    ```bash
-   docker run -it --rm --gpus=all --network=host --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 -v ${LLAMA2_DATA_DIR}:/data mlperf-nvidia:llama2_70b_lora_ngc25.09_pyt
+   docker run -it --rm --gpus=all --network=host --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 -v ${LLAMA2_DATA_DIR}:/data mlperf-inventec:llama2_70b_lora_nemo25.09
    ```
 
    Then run within the container, under the /workspace/ft-llm directory:
@@ -102,14 +102,14 @@ Step-by-step
 4. Create the SquashFS file from the docker image on the compute node ("compute-h100-1").
 
    ```bash
-   enroot import -o ${SQSH_DIR}/llama2_70b_lora_ngc25.09_pyt.sqsh dockerd://mlperf-nvidia:llama2_70b_lora_ngc25.09_pyt
+   enroot import -o ${SQSH_DIR}/llama2_70b_lora_nemo25.09.sqsh dockerd://mlperf-inventec:llama2_70b_lora_nemo25.09
    ```
 
 5. Launch training with Slurm on the *head* node ("head-p8000-1").  Navigate to the directory where `run.sub` is stored and execute the following.
 
    ```bash
    source env.sh
-   source config_P8000_1x8x1xtp8pp1cp1.sh
+   source config_P8000IG6H100_1x8x1xtp8pp1cp1.sh
    sbatch -w compute-h100-1 -t ${WALLTIME} run.sub
    ```
 
@@ -119,10 +119,10 @@ Step-by-step
    * It's a good idea, before you start `run.sub`, to verify that there is no process occupying the CPUs/GPUs/memory on the compute node.  For example, do `docker ps -a` and `docker rm <CONTAINER ID>` to remove all running/pending containers.
    * You could adjust experiment setting in the `env.sh` script.
 
-   The above `sbatch` command would output the Slurm batch job id.  You could track progress of the slurm batch job by checking the corresponding log file.
+   The above `sbatch` command would output the Slurm batch job id.  You could track progress of the Slurm batch job by checking the corresponding log file.
 
    ```bash
-   tail -f slurm-<SLURM JOB ID>.out
+   tail -fn +1 slurm-<SLURM JOB ID>.out
    ```
 
 6. Check experiment results in the `results` folder.
