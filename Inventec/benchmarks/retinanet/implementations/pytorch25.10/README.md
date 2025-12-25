@@ -20,7 +20,7 @@ Environment Setup
 * Storage
 
   - Network storage (preferably a High Performance Storage) mounted on both the head and the compute nodes: `/hps` or `/mnt` on "head-p8000-1" and "compute-h100-1", "compute-h100-2", ...
-  - Source code to be checked out in ${USER_DIR} (`/mnt/jkjung`), where the retinanet benchmark code is found at `training_results_v5.0/Inventec/benchmarks/retinanet/implementations/P8000_ngc23.09_pytorch`
+  - Source code to be checked out in ${USER_DIR} (`/mnt/jkjung`), where the retinanet benchmark code is found at `training_results_v5.0/Inventec/benchmarks/retinanet/implementations/pytorch25.10
   - Data (training data, validation data, checkpoints) in ${RETINANET_DATA_DIR} (`/hps/data/mlperf/retinanet`)
   - Docker container SquashFS file in ${SQSH_DIR} (`/hps/sqsh`)
 
@@ -46,7 +46,7 @@ Step-by-step
 2. Build the container on the compute node ("compute-h100-1").  You will have to use your NGC API key to pull the base PyTorch docker image, e.g. `docker login nvcr.io` or use `~/.config/enroot/.credentials`.  Note that the docker image name "bert_ngc23.09_pyt" is different from that in NVIDIA's original implementation.
 
    ```shell
-   cd training_results_v5.0/Inventec/benchmarks/retinanet/implementations/P8000_ngc25.10_pytorch/
+   cd training_results_v5.0/Inventec/benchmarks/retinanet/implementations/pytorch25.10/
    docker build -t mlperf-nvidia:retinanet_ngc25.10_pyt .
    ```
 
@@ -119,7 +119,7 @@ Step-by-step
 
    ```bash
    source env.sh
-   source config_P8000H100_1x8x32.sh
+   source config_P8000IG6H100_1x8x32.sh
    sbatch -w compute-h100-1 --time=${WALLTIME} run.sub
    ```
 
