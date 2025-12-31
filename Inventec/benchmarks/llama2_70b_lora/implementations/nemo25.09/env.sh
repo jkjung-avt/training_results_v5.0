@@ -4,6 +4,6 @@
 export DATADIR="${LLAMA2_DATA_DIR}/gov_report"
 export MODEL="${LLAMA2_DATA_DIR}/model"
 export LOGDIR="./results"
-export CONT_FILE="${SQSH_DIR}/llama2_70b_lora_ngc25.09_pyt.sqsh"
+export CONT_FILE="${SQSH_DIR}/llama2_70b_lora_nemo25.09.sqsh"
 export SLURM_MPI_TYPE=pmi2
 export NEXP=1   # Number of experiments (training runs)
