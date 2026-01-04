@@ -41,3 +41,11 @@ export USE_DDP=1
 
 ## force to use packed trainset
 export DATADIR_PHASE2=${DATADIR_PHASE2_PACKED}
+
+# Inventec stuffs
+export MLPERF_SUBMITTER="Inventec Corporation"
+export MLPERF_SUBMISSION_ORG="Inventec Corporation"
+export MLPERF_SYSTEM_NAME="P8000IG6H100"
+export MLPERF_SUBMISSION_PLATFORM="Inventec P8000IG6H100"
+export MLPERF_STATUS="research"
+export GPU_ARCH=h

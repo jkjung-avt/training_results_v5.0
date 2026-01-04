@@ -20,7 +20,7 @@ Environment Setup
 * Storage
 
   - Network storage (preferably a High Performance Storage) mounted on both the head and the compute nodes: `/hps` or `/mnt` on "head-p8000-1" and "compute-h100-1", "compute-h100-2", ...
-  - Source code to be checked out in ${USER_DIR} (`/mnt/jkjung`), where the bert benchmark code is found at `training_results_v5.0/Inventec/benchmarks/bert/implementations/P8000_ngc23.09_pytorch`
+  - Source code to be checked out in ${USER_DIR} (`/mnt/jkjung`), where the bert benchmark code is found at `training_results_v5.0/Inventec/benchmarks/bert/implementations/pytorch23.09`
   - Data (training data, validation data, checkpoints) in ${BERT_DATA_DIR} (`/hps/data/mlperf/bert`)
   - Docker container SquashFS file in ${SQSH_DIR} (`/hps/sqsh`)
 
@@ -46,16 +46,16 @@ Step-by-step
 2. Build the container on the compute node ("compute-h100-1").  You will have to use your NGC API key to pull the base PyTorch docker image, e.g. `docker login nvcr.io` or use `~/.config/enroot/.credentials`.
 
    ```shell
-   cd training_results_v5.0/Inventec/benchmarks/bert/implementations/P8000_ngc23.09_pytorch/
-   docker build -t mlperf-nvidia:bert_ngc23.09_pyt .
+   cd training_results_v5.0/Inventec/benchmarks/bert/implementations/pytorch23.09/
+   docker build -t mlperf-inventec:bert_pytorch23.09 .
    ```
 
 3. Prepare dataset on the compute node ("compute-h100-1").  You could refer to [README-NVIDIA.md](README-NVIDIA.md) for more details about the `prepare_data.sh` script.
 
-   Start the container with the following command.  Note that the container (without the `--rm` flag) is not removed automatically.  You'll need to do `docker rm <CONTAINER ID>` manually.
+   Start the container with the following command.
 
    ```bash
-   docker run -it --gpus=all --runtime=nvidia --ipc=host -v ${BERT_DATA_DIR}:/workspace/bert_data mlperf-nvidia:bert_ngc23.09_pyt
+   docker run -it --rm --gpus=all --network=host --ipc=host --ulimit memlock=-1 --ulimit stack=67108864 -v ${BERT_DATA_DIR}:/workspace/bert_data mlperf-inventec:bert_pytorch23.09
    ```
 
    Then run within the container:
@@ -98,17 +98,19 @@ Step-by-step
        └── vocab.txt
    ```
 
+   Exit the container.
+
 4. Create the SquashFS file from the docker image on the compute node ("compute-h100-1").  The created `${SQSH_DIR}/bert_ngc23.09_pyt.sqsh` file is needed for running the experiment with Slurm.
 
    ```bash
-   enroot import -o ${SQSH_DIR}/bert_ngc23.09_pyt.sqsh dockerd://mlperf-nvidia:bert_ngc23.09_pyt
+   enroot import -o ${SQSH_DIR}/bert_pytorch23.09.sqsh dockerd://mlperf-inventec:bert_pytorch23.09
    ```
 
 5. Launch training with Slurm on the *head* node ("head-p8000-1").  Navigate to the directory where `run.sub` is stored and execute the following.
 
    ```bash
    source env.sh
-   source config_P8000H100_1x8x48x1_pack.sh
+   source config_P8000IG6H100_1x8x48x1_pack.sh
    sbatch -w compute-h100-1 -t ${WALLTIME} run.sub
    ```
 
@@ -121,7 +123,7 @@ Step-by-step
    The above `sbatch` command would output the Slurm batch job id.  You could track progress of the Slurm batch job by checking the corresponding log file.
 
    ```bash
-   tail -f slurm-<SLURM JOB ID>.out
+   tail -fn +1 slurm-<SLURM JOB ID>.out
    ```
 
 6. Check experiment results in the `results` folder.
