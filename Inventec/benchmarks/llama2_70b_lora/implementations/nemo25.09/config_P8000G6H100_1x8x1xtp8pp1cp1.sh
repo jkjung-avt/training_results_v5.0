@@ -30,7 +30,7 @@ export WALLTIME=$((5 + ${NEXP:-1} * ($WALLTIME_RUNANDTIME + 10)))
 # Inventec stuffs
 export MLPERF_SUBMITTER="Inventec Corporation"
 export MLPERF_SUBMISSION_ORG="Inventec Corporation"
-export MLPERF_SYSTEM_NAME="P8000IG6H100"
-export MLPERF_SUBMISSION_PLATFORM="Inventec P8000IG6H100"
+export MLPERF_SYSTEM_NAME="P8000G6H100"
+export MLPERF_SUBMISSION_PLATFORM="Inventec P8000G6H100"
 export MLPERF_STATUS="research"
 export GPU_ARCH=h

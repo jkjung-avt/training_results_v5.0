@@ -109,7 +109,7 @@ Step-by-step
 
    ```bash
    source env.sh
-   source config_P8000IG6H100_1x8x1xtp8pp1cp1.sh
+   source config_P8000G6H100_1x8x1xtp8pp1cp1.sh
    sbatch -w compute-h100-1 -t ${WALLTIME} run.sub
    ```
 

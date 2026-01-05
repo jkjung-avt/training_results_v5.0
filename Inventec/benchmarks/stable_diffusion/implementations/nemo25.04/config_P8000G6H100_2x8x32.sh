@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-export DGXNNODES=1
+export DGXNNODES=2
 export DGXNGPU=8
 export BATCHSIZE=32
 source $(dirname ${BASH_SOURCE[0]})/config_gbs_256.sh
@@ -31,7 +31,7 @@ source $(dirname ${BASH_SOURCE[0]})/config_common.sh
 # Inventec stuffs
 export MLPERF_SUBMITTER="Inventec Corporation"
 export MLPERF_SUBMISSION_ORG="Inventec Corporation"
-export MLPERF_SYSTEM_NAME="P8000IG6H100"
-export MLPERF_SUBMISSION_PLATFORM="Inventec P8000IG6H100"
+export MLPERF_SYSTEM_NAME="P8000G6H100"
+export MLPERF_SUBMISSION_PLATFORM="Inventec P8000G6H100"
 export MLPERF_STATUS="research"
 export GPU_ARCH=h

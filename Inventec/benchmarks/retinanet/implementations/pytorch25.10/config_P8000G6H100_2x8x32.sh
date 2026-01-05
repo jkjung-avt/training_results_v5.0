@@ -9,7 +9,7 @@ export WARMUP_EPOCHS=${WARMUP_EPOCHS:-0}
 export EXTRA_PARAMS=${EXTRA_PARAMS:-'--jit --frozen-bn-opt --frozen-bn-fp16 --apex-adam --apex-focal-loss --apex-head-fusion --disable-ddp-broadcast-buffers --reg-head-pad --cls-head-pad --cuda-graphs --dali --dali-matched-idxs --dali-eval --cuda-graphs-syn --async-coco --dali-cpu-decode --master-weights --eval-batch-size=32'}
 
 ## System run params
-export DGXNNODES=1
+export DGXNNODES=2
 export DGXSYSTEM=$(basename $(readlink -f ${BASH_SOURCE[0]}) | sed 's/^config_//' | sed 's/\.sh$//' )
 export WALLTIME_RUNANDTIME=120
 ## Set clocks and walltime for maxQ and minEDP runs
@@ -31,7 +31,7 @@ export DGXHT=2  # HT is on is 2, HT off is 1
 # Inventec stuffs
 export MLPERF_SUBMITTER="Inventec Corporation"
 export MLPERF_SUBMISSION_ORG="Inventec Corporation"
-export MLPERF_SYSTEM_NAME="P8000IG6H100"
-export MLPERF_SUBMISSION_PLATFORM="Inventec P8000IG6H100"
+export MLPERF_SYSTEM_NAME="P8000G6H100"
+export MLPERF_SUBMISSION_PLATFORM="Inventec P8000G6H100"
 export MLPERF_STATUS="research"
 export GPU_ARCH=h
