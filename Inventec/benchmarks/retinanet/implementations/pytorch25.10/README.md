@@ -21,7 +21,7 @@ Environment Setup
 
   - Network storage (preferably a High Performance Storage) mounted on both the head and the compute nodes: `/hps` or `/mnt` on "head-p8000-1" and "compute-h100-1", "compute-h100-2", ...
   - Source code to be checked out in ${USER_DIR} (`/mnt/jkjung`), where the retinanet benchmark code is found at `training_results_v5.0/Inventec/benchmarks/retinanet/implementations/pytorch25.10
-  - Data (training data, validation data, checkpoints) in ${RETINANET_DATA_DIR} (`/hps/data/mlperf/retinanet`)
+  - Data (training data, validation data, checkpoints) in ${RETINANET_DATA_DIR} (`/hps/data/mlperf_training/retinanet`)
   - Docker container SquashFS file in ${SQSH_DIR} (`/hps/sqsh`)
 
 <a name="steps"></a>
@@ -32,7 +32,7 @@ Step-by-step
 
    ```shell
    export USER_DIR=/mnt/jkjung
-   export RETINANET_DATA_DIR=/hps/data/mlperf/retinanet
+   export RETINANET_DATA_DIR=/hps/data/mlperf_training/retinanet
    export SQSH_DIR=/hps/sqsh
    ```
 
