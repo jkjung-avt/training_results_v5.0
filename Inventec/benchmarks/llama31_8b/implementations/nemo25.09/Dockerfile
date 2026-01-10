@@ -37,7 +37,7 @@ COPY ./pytorch_ckpt.patch /workspace/pytorch/pytorch_ckpt.patch
 RUN patch --directory=/usr/local/lib/python3.12/dist-packages -p1 < /workspace/pytorch/pytorch_ckpt.patch
 WORKDIR /workspace/
 
-RUN NVARCH=$(uname -m |grep x86_64 2>/dev/null || echo sbsa) && \
+RUN NVARCH=$(uname -m | grep x86_64 2>/dev/null || echo sbsa) && \
     curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/${NVARCH}/3bf863cc.pub > /etc/apt/trusted.gpg.d/cuda.asc && \
     echo "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/${NVARCH} /" > /etc/apt/sources.list.d/cuda.list && \
     apt-get update && apt-get install -y libcudnn9-cuda-13=9.13.1.26-1 && rm -rf /var/lib/apt/lists/*
@@ -45,10 +45,9 @@ ENV CUDNN_VERSION=9.13.1.26
 RUN pip install numcodecs==0.13.1
 RUN pip install nvidia-mathdx==25.1.1
 
-
 ## 1. Apex
 ARG APEX_REVISION=SKIP
-ENV CUSTOM_APEX_REVISION ${APEX_REVISION}
+ENV CUSTOM_APEX_REVISION=${APEX_REVISION}
 ARG APEX_MAX_JOBS=4
 
 RUN if [ "${APEX_REVISION}" != SKIP ]; then \
@@ -62,7 +61,7 @@ RUN if [ "${APEX_REVISION}" != SKIP ]; then \
 
 ## 2. Transformer Engine
 ARG TE_REVISION=release_v2.8
-ENV CUSTOM_TE_REVISION ${TE_REVISION}
+ENV CUSTOM_TE_REVISION=${TE_REVISION}
 
 RUN if [ "${TE_REVISION}" != SKIP ]; then \
     pip uninstall -y transformer-engine && \
@@ -75,12 +74,12 @@ RUN if [ "${TE_REVISION}" != SKIP ]; then \
     git -C 3rdparty/cudnn-frontend checkout 80a8e4af4d89d33a2c59d51fcf9fda1c9d368cd4 && \
     git -C 3rdparty/googletest checkout f8d7d77c06936315286eb55f8de22cd23c188571 && \
     git -C 3rdparty/cutlass checkout 57e3cfb47a2d9e0d46eb6335c3dc411498efa198 && \
-    NVTE_CUDA_ARCHS="100a;103a" NVTE_UB_WITH_MPI=1 NVTE_FRAMEWORK=pytorch MPI_HOME=/usr/local/mpi pip install --no-build-isolation . \
+    NVTE_CUDA_ARCHS="90;100a;103a" NVTE_UB_WITH_MPI=1 NVTE_FRAMEWORK=pytorch MPI_HOME=/usr/local/mpi pip install --no-build-isolation . \
     ; fi
 
 ## 3. NeMo
 ARG NEMO_REVISION=25.09-alpha.rc1
-ENV CUSTOM_NEMO_REVISION ${NEMO_REVISION}
+ENV CUSTOM_NEMO_REVISION=${NEMO_REVISION}
 
 RUN git clone https://github.com/NVIDIA/NeMo.git && \
     cd NeMo && \
@@ -93,7 +92,7 @@ RUN git clone https://github.com/NVIDIA/NeMo.git && \
 
 ## 3.1 NeMo-Run
 ARG NEMORUN_REVISION=v0.5.0
-ENV CUSTOM_NEMORUN_REVISION ${NEMORUN_REVISION}
+ENV CUSTOM_NEMORUN_REVISION=${NEMORUN_REVISION}
 
 RUN git clone https://github.com/NVIDIA/NeMo-Run.git && \
     cd NeMo-Run && \
@@ -113,21 +112,18 @@ RUN pip uninstall -y megatron-core && \
     cd megatron/core/datasets && \
     make
 
-ENV PYTHONPATH "${PYTHONPATH}:/workspace/Megatron-LM"
-
 
 ## 5. Benchmark dependencies
 RUN pip uninstall transformers -y
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-
 # Benchmark code
 WORKDIR /workspace/llm
 
 COPY . .
 RUN cd /workspace/llm/embedding_lib && pip install --force-reinstall --no-deps .
-ENV PYTHONPATH "/workspace/llm:/workspace/NeMo:${PYTHONPATH}"
+ENV PYTHONPATH="/workspace/llm:/workspace/NeMo:/workspace/Megatron-LM:${PYTHONPATH}"
 
 # Install NCCL v2.28.3-1:
 ARG NCCL_REVISION=v2.28.3-1
@@ -139,7 +135,7 @@ RUN export DEBIAN_FRONTEND=noninteractive &&        \
     echo "NCCL_REVISION=${NCCL_REVISION}" &&      \
     git checkout "${NCCL_REVISION}" &&             \
     make -j24 install
-ENV NCCL_VERSION "${NCCL_REVISION}"
+ENV NCCL_VERSION="${NCCL_REVISION}"
 
 # To get rid of bitsandbytes logs
 RUN pip uninstall -y bitsandbytes
