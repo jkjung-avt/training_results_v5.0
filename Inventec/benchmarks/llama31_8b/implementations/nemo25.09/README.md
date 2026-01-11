@@ -1,173 +1,124 @@
-## Running NVIDIA Large Language Model Llama 3.1 405B PyTorch MLPerf Benchmark
+# MLPerf Llama 3.1 8B Training on Inventec P8000/P9000 GPU Servers
 
-This file contains the instructions for running the NVIDIA Large Language Model Llama 3.1 405B PyTorch MLPerf Benchmark on NVIDIA hardware.
+Table of contents
+-----------------
 
-## 1. Hardware Requirements
+* [Environment Setup](#setup)
+* [Step-by-step](#steps)
+* [Known Issues](#issues)
 
-- At least 2.5TB disk space is required.
-- NVIDIA GPU with at least 80GB memory is strongly recommended.
-- GPUs are not required for dataset preparation.
+<a name="setup"></a>
+Environment Setup
+------------------
 
-## 2. Software Requirements
+* Machines
 
-- Slurm with [Pyxis](https://github.com/NVIDIA/pyxis) and [Enroot](https://github.com/NVIDIA/enroot)
-- [Docker](https://www.docker.com/)
+  - Slurm head node * 1, e.g. "p8000-head-1"
+  - Slurm compute node * 1 or more, e.g. "compute-h100-1", "compute-h100-2", ...
+  - Also refer to [README_8b.md](README_8b.md) for hardware and software requirements
 
-## 3. Set up
+* Storage
 
-### 3.1 Build the container
+  - Network storage (preferably a High Performance Storage) mounted on both the head and the compute nodes: `/hps` or `/mnt` on "head-p8000-1" and "compute-h100-1", "compute-h100-2", ...
+  - Source code (`training_results_v5.0`) to be checked out in ${USER_DIR} (`/mnt/jkjung`)
+  - Data (training data, validation data, checkpoints) in ${LLAMA31_8B_DATA_DIR} (`/hps/data/mlperf_training/llama31`)
+  - Docker container SquashFS file in ${SQSH_DIR} (`/hps/sqsh`)
 
-Replace `<docker/registry>` with your container registry and build:
+<a name="steps"></a>
+Step-by-step
+------------
 
-```bash
-docker build -t <docker/registry>/mlperf-nvidia:llama31_405b-pyt .
-# optionally: docker push <docker/registry>/mlperf-nvidia:llama31_405b-pyt
-export CONT=<docker/registry>/mlperf-nvidia:llama31_405b-pyt
-```
+1. Set environment variables.  Replace the paths below with your own if necessary.
 
-make sure that container is accessible on your Slurm system.
+   ```shell
+   export USER_DIR=/mnt/jkjung
+   export LLAMA31_8B_DATA_DIR=/hps/data/mlperf_training/llama31
+   export SQSH_DIR=/hps/sqsh
+   ```
 
-### 3.2 Prepare dataset
+   Then clone this repository on the compute node ("compute-h100-1").
 
-Set the directory for the data to be downloaded to:
-```bash
-export DATADIR=<path/to/dataset>
-```
+   ```shell
+   cd ${USER_DIR}
+   git clone https://github.com/jkjung-avt/training_results_v5.0.git
+   ```
 
-To download the dataset and align the directories with the layout the benchmark expects, run:
+2. Build the container on the compute node ("compute-h100-1").  You will have to use your NGC API key to pull the base PyTorch docker image, e.g. `docker login nvcr.io` or use `~/.config/enroot/.credentials`.
 
-```bash
-bash data_scripts/download.sh
-```
+   ```shell
+   cd training_results_v5.0/Inventec/benchmarks/dlrm_dcnv2/implementations/hugectr25.03/
+   docker build -t mlperf-inventec:llama31_8b_nemo25.09 .
+   ```
 
-The final content under `${DATADIR}/405b` should be:
+3. Prepare dataset on the compute node ("compute-h100-1").
 
-```
-$tree 405b
-405b
-|-- c4-train.en_6_text_document.bin
-|-- c4-train.en_6_text_document.idx
-|-- c4-train.en_7_text_document.bin
-|-- c4-train.en_7_text_document.idx
-|-- c4-validation-91205-samples.en_text_document.bin
-|-- c4-validation-91205-samples.en_text_document.idx
-`-- tokenizer
-    |-- special_tokens_map.json
-    |-- tokenizer.json
-    |-- tokenizer.model
-    |-- tokenizer.model.v1
-    `-- tokenizer_config.json
+   Set the directory for the data to be downloaded to.  Then download the dataset.  This takes a couple of hours.
 
-2 directories, 11 files
-```
+   ```bash
+   export DATADIR=<path/to/dataset>
+   bash data_scripts/download_8b.sh
+   ```
 
-### 3.3 Model and checkpoint preparation
+   At the end, the directory structure should look like:
 
-#### 3.3.1 Publication/Attribution
+   ```bash
+   $ tree ${LLAMA31_8B_DATA_DIR}/8b
+   8b/
+   |-- LICENSE.txt
+   |-- NOTICE.txt
+   |-- c4-train.en_6_text_document.bin
+   |-- c4-train.en_6_text_document.idx
+   |-- c4-validation-91205-samples.en_text_document.bin
+   |-- c4-validation-91205-samples.en_text_document.idx
+   |-- llama-3-1-8b-preprocessed-c4-dataset.md5
+   `-- tokenizer
+       |-- LICENSE
+       |-- README.md
+       |-- USE_POLICY.md
+       |-- llama-3-1-8b-tokenizer.md5
+       |-- special_tokens_map.json
+       |-- tokenizer.json
+       `-- tokenizer_config.json
 
-[Megatron](https://docs.nvidia.com/deeplearning/nemo/user-guide/docs/en/stable/nlp/nemo_megatron/intro.html) is a large, powerful transformer developed by the Applied Deep Learning Research team at NVIDIA. This repository uses [NeMo Megatron](https://github.com/NVIDIA/NeMo). NeMo Megatron GPT has been integrated with [NVIDIA Transformer Engine](https://github.com/NVIDIA/TransformerEngine). Transformer Engine enables FP8 training on NVIDIA Hopper GPUs.
+   2 directories, 14 files
+   ```
 
-#### 3.3.2 List of Layers
+4. Prepare the model and checkpoint.
 
-The model largely follows the [Llama 3.1 405B paper](https://arxiv.org/abs/2407.21783). The only difference is that we replace the paper's TikTokenizer with the Mixtral 8x22b tokenizer in this benchmark. Please refer to the [Model details section](https://github.com/mlcommons/training/tree/master/large_language_model_pretraining/nemo#model-details) from the reference for more details. 
+   The model largely follows the paper titled [The Llama 3 Herd of Models](https://arxiv.org/abs/2407.21783).
 
-#### 3.3.3 Model checkpoint
-In the benchmarking region, we resume training from Meta's official HuggingFace checkpoint. Please refer to the [instructions](https://github.com/mlcommons/training/tree/master/large_language_model_pretraining/nemo#checkpoint-download) from the reference to download the BF16 model checkpoint. 
+   The LLama3.1 8B is trained from scratch and is not using a checkpoint.
 
-**NOTE**: Before you proceed, make sure that your current working directory is able to hold >1.5TB of data. 
+5. Create the SquashFS file from the docker image on the compute node ("compute-h100-1").
 
-Assuming that you are running the download command under a given directory, with its location stored under `LOAD_CHECKPOINTS_PATH` environment variable. After the checkpoint is downloaded, you should be able to find a `405b` folder which holds a `context` and `weights` subfolder under the current directory: 
+   ```bash
+   enroot import -o ${SQSH_DIR}/llama31_8b_nemo25.09.sqsh dockerd://mlperf-inventec:llama31_8b_nemo25.09
+   ```
 
-```
-<LOAD_CHECKPOINTS_PATH>
-└── 405b
-    ├── context
-    │   ├── nemo_tokenizer
-    │   │   ├── special_tokens_map.json
-    │   │   ├── tokenizer_config.json
-    │   │   └── tokenizer.json
-    │   ├── io.json
-    │   └── model.yaml
-    └── weights
-        ├── __0_0.distcp
-        ├── __0_1.distcp
-        ├── .metadata
-        ├── common.pt
-        └── metadata.json
-```
+6. Launch training with Slurm on the *head* node ("head-p8000-1").  Navigate to the directory where `run.sub` is stored and execute the following.
 
-By default, when we run the container, we will mount `LOAD_CHECKPOINTS_PATH` to `/load_checkpoints` in the container. Thus, you should set `export LOAD_CHECKPOINT="/load_checkpoints/405b"` to ensure that the `405b` folder is accessed in the container. 
+   ```bash
+   source env.sh
+   source config_P8000G6H100_1x8x4xtp1pp1cp1_8b.sh
+   sbatch -w compute-h100-1 --time=${WALLTIME} run.sub
+   ```
 
-## 4. Launch training
+   Note:
 
-For training, we use Slurm with the Pyxis extension, and Slurm's MPI support to run our container.
+   * Rename "compute-h100-1" if you are using a different Slurm compute node.
+   * It's a good idea, before you start `run.sub`, to verify that there is no process occupying the CPUs/GPUs/memory on the compute node.  For example, do `docker ps -a` and `docker rm <CONTAINER ID>` to remove all running/pending containers.
+   * You could adjust experiment setting in the `env.sh` script.
 
-Navigate to the directory where `run.sub` is stored.
+   The above `sbatch` command would output the Slurm batch job id.  You could track progress of the Slurm batch job by checking the corresponding log file.
 
-The launch command structure:
-```bash
-export DATADIR="<desired/dataset/path>"
-export LOAD_CHECKPOINTS_PATH="</path/to/your/downloaded/checkpoint>"
-export LOAD_CHECKPOINT="/load_checkpoints/405b"
-export LOGDIR="</path/to/output/dir>" # set the place where the output logs will be saved
-export CONT=$CONT
-source config_GB200_128x4x144xtp4pp8cp2_cg.sh  # select config and source it
-sbatch -N ${DGXNNODES} --time=${WALLTIME} run.sub  # you may be required to set --account and --partition here
-```
+   ```bash
+   tail -fn +1 slurm-<SLURM JOB ID>.out
+   ```
 
-Replace `<desired/dataset/path>` and `</path/to/your/downloaded/checkpoint>` with your paths set up in Section 3.
+7. Check experiment results in the `results` folder.
 
-All configuration files follow the format `config_<SYSTEM_NAME>_<NODES>x<GPUS/NODE>x<BATCH/GPU>xtpXppYcpZ.sh`, where X represents tensor parallel, Y represents pipeline parallel, and Z represents context parallel.
+<a name="issues"></a>
+Known Issues
+------------
 
-# 5. Quality
-
-### Quality metric
-Log Perplexity
-
-### Quality target
-5.6
-
-### Evaluation frequency
-Evaluate after every 46,080 sequences (=377.49B tokens)
-
-### Evaluation thoroughness
-Evaluation on the validation subset that consists of 5,760 sequences (=47.19B tokens).
-
-
-# 6. Additional notes
-
-### Config naming convention
-
-Configuration files follow the format `config_<SYSTEM_NAME>_<NODES>x<GPUS/NODE>x<BATCH/GPU>xtpXppYcpZ.sh`, where X represents tensor parallel (TP), Y represents pipeline parallel (PP), and Z represents context parallel (CP).
-
-Notice here that: 
-
-```
-MP = TP * PP * CP
-DP = WS // MP = (NNODES * GPUS_PER_NODE) / (TP * PP * CP)
-miniBS = GBS // DP
-```
-
-where: 
-```
-MP = model parallelism
-TP = tensor parallelism
-PP = pipeline parallelism
-DP = data parallelism
-WS = world size (number of nodes x number of gpus per node)
-GBS = global batch size
-```
-
-Note: changing `MICRO_BATCH_SIZE` doesn't affect GBS or any of the above parameters.
-Effectively it controls gradient accumulation (`GA = miniBS // microBS`).
-
-Recommendation on adjusting the knobs: 
-1. GBS should be divisible by `DP * VP`, where VP represents Virtual Pipelining, controlled by environment variable `INTERLEAVED_PIPELINE`. 
-2. Model's number of layers, controlled by `OVERWRITTEN_NUM_LAYERS` knob (with default 126), should be divisible by PP * VP. 
-   1. It's also recommended that, if you choose to adjust this knob, then you should export `LOAD_CHECKPOINT=""` to disable checkpoint loading, otherwise you will be loading a checkpoint with more layers to a model with fewer layers, which might cause issues. 
-
-
-### Seeds
-NeMo produces dataset index shuffling only on one process and holds the `SEED` value in the file name.
-Thus, all processes need to have the same value of `SEED` otherwise will not be able to read the data.
-The `SEED` environment variable can be set prior to launching the job, otherwise it is set in `run.sub`.
+* `SLURM_MPI_TYPE`: `pmi2` seems be perform better than `pmix` in our experiments.

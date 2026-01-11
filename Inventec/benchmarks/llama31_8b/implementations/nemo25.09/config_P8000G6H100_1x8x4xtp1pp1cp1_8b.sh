@@ -22,5 +22,13 @@ export DGXNNODES=1
 export DGXNGPU=8
 export DGXSYSTEM=$(basename $(readlink -f ${BASH_SOURCE[0]}) | sed 's/^config_//' | sed 's/\.sh$//' )
 
-export WALLTIME_RUNANDTIME=400 #220
+export WALLTIME_RUNANDTIME=720 #220
 export WALLTIME=$((5 + ${NEXP:-1} * ($WALLTIME_RUNANDTIME + 5)))
+
+# Inventec stuffs
+export MLPERF_SUBMITTER="Inventec Corporation"
+export MLPERF_SUBMISSION_ORG="Inventec Corporation"
+export MLPERF_SYSTEM_NAME="P8000G6H100"
+export MLPERF_SUBMISSION_PLATFORM="Inventec P8000G6H100"
+export MLPERF_STATUS="research"
+export GPU_ARCH=h100

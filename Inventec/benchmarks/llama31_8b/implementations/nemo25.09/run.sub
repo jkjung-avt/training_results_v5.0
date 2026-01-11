@@ -16,13 +16,14 @@
 
 #SBATCH --exclusive
 #SBATCH --mem=0
+#SBATCH --gpus-per-node=8
 
 set -eux
 
 echo "PROLOG_START $(date +%s)"
 
 # Vars without defaults
-: "${CONT:?CONT not set}"
+: "${CONT_FILE:?CONT_FILE not set}"
 : "${DGXSYSTEM:?DGXSYSTEM not set}"
 : "${WALLTIME:=?WALLTIME not set}"
 : "${WALLTIME_RUNANDTIME:?WALLTIME_RUNANDTIME not set}"
@@ -252,7 +253,7 @@ find "${DATADIR}" -type f -print0 | LC_ALL=C sort -z | xargs -0 stat --format='%
 
 # Setup container
 echo MELLANOX_VISIBLE_DEVICES="${MELLANOX_VISIBLE_DEVICES:-}"
-srun --ntasks-per-node=1 --container-image="${CONT}" --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" true
+srun --ntasks-per-node=1 --container-image="${CONT_FILE}" --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" true
 srun -N1 -n1 --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" ibv_devinfo --list
 srun -N1 -n1 --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" nvidia-smi topo -m
 
@@ -449,7 +450,7 @@ for _experiment_index in $(seq -w 1 "${NEXP}"); do
 
     (
         echo "Beginning trial ${_experiment_index} of ${NEXP}"
-        echo ":::DLPAL ${CONT} ${SLURM_JOB_ID} ${SLURM_JOB_NUM_NODES} ${SLURM_JOB_NODELIST} ${MLPERF_CLUSTER_NAME} ${DGXSYSTEM}"
+        echo ":::DLPAL ${CONT_FILE} ${SLURM_JOB_ID} ${SLURM_JOB_NUM_NODES} ${SLURM_JOB_NODELIST} ${MLPERF_CLUSTER_NAME} ${DGXSYSTEM}"
         echo ":::SYSJSON $(srun -N1 -n1 --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" mlperf-sysjson.sh)"
         srun -N1 -n1 --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" bash -c 'echo ":::GITCOMMITID ${GIT_COMMIT_ID} ${LAUNCHER_GIT_COMMIT_ID}"'
 

@@ -23,7 +23,7 @@
 # Setup directories
 ( umask 0002; mkdir -p "${LOGDIR}"; mkdir -p "${LOGDIR}/${NEMO_RESULTS_SUBDIR:-${DATESTAMP}}"; mkdir -p $NPY_INDEX_DIR; mkdir -p $MEM_DUMP_DIR )
 
-_cont_mounts="${LOGDIR}:/results,${NPY_INDEX_DIR}:/npy_index,${MEM_DUMP_DIR}:/mem_dump"
+_cont_mounts="/dev/infiniband:/dev/infiniband,${LOGDIR}:/results,${NPY_INDEX_DIR}:/npy_index,${MEM_DUMP_DIR}:/mem_dump"
 
 
 if [[ "${USE_SYNTHETIC_DATA:-0}" -eq 0 ]]; then
