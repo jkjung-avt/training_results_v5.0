@@ -20,7 +20,7 @@ Environment Setup
 * Storage
 
   - Network storage (preferably a High Performance Storage) mounted on both the head and the compute nodes: `/hps` or `/mnt` on "head-p8000-1" and "compute-h100-1", "compute-h100-2", ...
-  - Source code to be checked out in ${USER_DIR} (`/mnt/jkjung`), where the stable_diffusion benchmark code is found at `training_results_v5.0/Inventec/benchmarks/stable_diffusion/implementations/nemo25.04
+  - Source code (`training_results_v5.0`) to be checked out in ${USER_DIR} (`/mnt/jkjung`)
   - Data (training data, validation data, checkpoints) in ${SD_DATA_DIR} (`/hps/data/mlperf_training/stable_diffusion`)
   - Docker container SquashFS file in ${SQSH_DIR} (`/hps/sqsh`)
 
