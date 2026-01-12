@@ -2,13 +2,13 @@ source $(dirname ${BASH_SOURCE[0]})/config_common.sh
 source $(dirname ${BASH_SOURCE[0]})/config_common_8b.sh
 source $(dirname ${BASH_SOURCE[0]})/config_common_cg.sh
 
-export MINIBS=1 #4
-export TENSOR_MODEL_PARALLEL=4 #1
+export MINIBS=4
+export TENSOR_MODEL_PARALLEL=1
 export SEQ_PARALLEL=False
 
 export PIPELINE_MODEL_PARALLEL=1
 export INTERLEAVED_PIPELINE=null
-export CONTEXT_PARALLEL=1
+export CONTEXT_PARALLEL=8 #1
 
 export TP_COMM_OVERLAP=False
 export MICRO_BATCH_SIZE=1
