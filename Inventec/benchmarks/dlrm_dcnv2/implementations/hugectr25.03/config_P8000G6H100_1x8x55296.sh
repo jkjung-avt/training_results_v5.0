@@ -3,10 +3,9 @@ source $(dirname ${BASH_SOURCE[0]})/config_common.sh
 
 ## DL params
 export RUN_SCRIPT="train.py"
-#export BATCHSIZE=55296
-export BATCHSIZE=27648
+export BATCHSIZE=55296
 #export BATCHSIZE_EVAL=1048576
-export BATCHSIZE_EVAL=524288
+export BATCHSIZE_EVAL=55296
 export LEARNING_RATE=0.004
 export USE_MIXED_PRECISION=true
 export SCALER=16348
