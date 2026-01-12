@@ -92,7 +92,7 @@ Step-by-step
 
    ```bash
    source env.sh
-   source config_P8000G6H100_1x8x27648.sh
+   source config_P8000G6H100_1x8x55296.sh
    sbatch -w compute-h100-1 --time=${WALLTIME} run.sub
    ```
 
@@ -115,3 +115,46 @@ Known Issues
 ------------
 
 * `SLURM_MPI_TYPE`: `pmi2` seems be perform better than `pmix` in our experiments.
+* MLPerf DLRM-DCNv2 Training performance is subpar on P8000G6-H100 in Inventec AI Lab.  We suspect the root cause being the data loader does not produce data fast enough for the GPUs.  Referring to a snapshot of `nvidia-smi` during a training run below, the GPUs are only utilized at 20~50%.  We probably need to set up a really good High Performance Storage (HPS) for this training to work well...
+
+   ```
+   +-----------------------------------------------------------------------------------------+
+   | NVIDIA-SMI 580.95.05              Driver Version: 580.95.05      CUDA Version: 13.0     |
+   +-----------------------------------------+------------------------+----------------------+
+   | GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+   | Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+   |                                         |                        |               MIG M. |
+   |=========================================+========================+======================|
+   |   0  NVIDIA H100 80GB HBM3          On  |   00000000:19:00.0 Off |                    0 |
+   | N/A   37C    P0            345W /  700W |   36463MiB /  81559MiB |     18%      Default |
+   |                                         |                        |             Disabled |
+   +-----------------------------------------+------------------------+----------------------+
+   |   1  NVIDIA H100 80GB HBM3          On  |   00000000:3A:00.0 Off |                    0 |
+   | N/A   39C    P0            351W /  700W |   36463MiB /  81559MiB |     34%      Default |
+   |                                         |                        |             Disabled |
+   +-----------------------------------------+------------------------+----------------------+
+   |   2  NVIDIA H100 80GB HBM3          On  |   00000000:4C:00.0 Off |                    0 |
+   | N/A   35C    P0            342W /  700W |   17113MiB /  81559MiB |     19%      Default |
+   |                                         |                        |             Disabled |
+   +-----------------------------------------+------------------------+----------------------+
+   |   3  NVIDIA H100 80GB HBM3          On  |   00000000:5C:00.0 Off |                    0 |
+   | N/A   41C    P0            345W /  700W |   55727MiB /  81559MiB |     45%      Default |
+   |                                         |                        |             Disabled |
+   +-----------------------------------------+------------------------+----------------------+
+   |   4  NVIDIA H100 80GB HBM3          On  |   00000000:9B:00.0 Off |                    0 |
+   | N/A   39C    P0            336W /  700W |   55707MiB /  81559MiB |     33%      Default |
+   |                                         |                        |             Disabled |
+   +-----------------------------------------+------------------------+----------------------+
+   |   5  NVIDIA H100 80GB HBM3          On  |   00000000:BA:00.0 Off |                    0 |
+   | N/A   36C    P0            333W /  700W |   19923MiB /  81559MiB |     30%      Default |
+   |                                         |                        |             Disabled |
+   +-----------------------------------------+------------------------+----------------------+
+   |   6  NVIDIA H100 80GB HBM3          On  |   00000000:CB:00.0 Off |                    0 |
+   | N/A   37C    P0            338W /  700W |   55729MiB /  81559MiB |     39%      Default |
+   |                                         |                        |             Disabled |
+   +-----------------------------------------+------------------------+----------------------+
+   |   7  NVIDIA H100 80GB HBM3          On  |   00000000:DA:00.0 Off |                    0 |
+   | N/A   42C    P0            322W /  700W |   16569MiB /  81559MiB |     32%      Default |
+   |                                         |                        |             Disabled |
+   +-----------------------------------------+------------------------+----------------------+
+   ```
