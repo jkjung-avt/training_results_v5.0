@@ -89,11 +89,10 @@ export NVTE_NORM_FWD_USE_CUDNN=1
 export NVTE_NORM_BWD_USE_CUDNN=1
 
 export FP8_RECIPE="tensorwise"
-export NVTE_DPA_FP8_RECIPE=""
-export NVTE_DPA_FP8DS_REDUCE_AMAX=0
+#export NVTE_DPA_FP8_RECIPE=""
+#export NVTE_DPA_FP8DS_REDUCE_AMAX=0
 
 export TP_PP_DP_MAPPING=True
 
 export BINDCMD="bindpcie --cpu=node"
 export EXTRA_ARGS=""
-export GPU_ARCH=gb200
