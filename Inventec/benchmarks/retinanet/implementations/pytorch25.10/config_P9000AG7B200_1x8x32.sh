@@ -34,4 +34,3 @@ export MLPERF_SUBMISSION_ORG="Inventec Corporation"
 export MLPERF_SYSTEM_NAME="P9000AG7B200"
 export MLPERF_SUBMISSION_PLATFORM="Inventec P9000AG7B200"
 export MLPERF_STATUS="research"
-export GPU_ARCH=b

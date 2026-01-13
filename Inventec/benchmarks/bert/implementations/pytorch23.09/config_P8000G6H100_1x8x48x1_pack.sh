@@ -48,4 +48,3 @@ export MLPERF_SUBMISSION_ORG="Inventec Corporation"
 export MLPERF_SYSTEM_NAME="P8000G6H100"
 export MLPERF_SUBMISSION_PLATFORM="Inventec P8000G6H100"
 export MLPERF_STATUS="research"
-export GPU_ARCH=h
