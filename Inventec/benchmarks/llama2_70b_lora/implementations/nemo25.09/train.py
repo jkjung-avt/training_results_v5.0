@@ -12,22 +12,29 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import logging as base_logging
-base_logging.getLogger("pytorch_lightning.utilities.rank_zero").setLevel(base_logging.ERROR)
-base_logging.getLogger("nemo.lightning.pytorch.strategies.megatron_strategy").setLevel(base_logging.ERROR)
-base_logging.getLogger("lightning.pytorch.accelerators.cuda").setLevel(base_logging.ERROR)
-base_logging.getLogger("lightning.pytorch.trainer.connectors.signal_connector").setLevel(base_logging.ERROR)
-base_logging.getLogger("lightning.fabric.utilities.distributed").setLevel(base_logging.ERROR)
-base_logging.getLogger("torch_tensorrt.dynamo.conversion.converter_utils").setLevel(base_logging.ERROR)
+import os
+import logging
+from math import floor, ceil
 
-from nemo.utils import logging
-logging.setLevel(logging.ERROR)
+logging.getLogger("nemo.utils.import_utils").disabled = True
+logging.getLogger("megatron.core.utils").disabled = True
+
+# To log only on rank-0
+rank = int(os.getenv("SLURM_PROCID", 0))
+
+
+class RankZeroFilter(logging.Filter):
+    def filter(self, record):
+        return rank == 0
+
+
+root = logging.getLogger()
+root.addFilter(RankZeroFilter())
 
 import warnings
+
 warnings.filterwarnings("ignore")
 
-import atexit
-import os
 from dataclasses import make_dataclass
 
 import torch
@@ -36,13 +43,101 @@ from omegaconf.omegaconf import OmegaConf
 
 torch.cuda.set_device(int(os.getenv("SLURM_LOCALID", "0")))
 
+
 import gc
+
+# PATCH MCORE LOAD TO AVOID OOM. This must happen before nemo imports.
+import megatron.core.dist_checkpointing
+from megatron.core.dist_checkpointing.dict_utils import extract_matching_values, merge
+from megatron.core.dist_checkpointing.mapping import ShardedObject, apply_factory_merges
+from megatron.core.dist_checkpointing.serialization import determine_global_metadata, extract_sharded_base, load_preprocess, load_sharded_metadata, parse_strict_flag, validate_integrity_and_strict_load, validate_sharded_objects_handling, verify_checkpoint_and_load_strategy
+from megatron.core.dist_checkpointing.validation import StrictHandling
+original_load = megatron.core.dist_checkpointing.serialization.load
+
+def new_load(
+    sharded_state_dict,
+    checkpoint_dir,
+    sharded_strategy=None,
+    common_strategy=None,
+    validate_access_integrity=True,
+    strict=StrictHandling.ASSUME_OK_UNEXPECTED,
+):
+   
+    sharded_strategy, common_strategy = verify_checkpoint_and_load_strategy(
+        checkpoint_dir, sharded_strategy, common_strategy
+    )
+
+    # Dequantize all FP8 tensors in the state dict into their corresponding high-precision tensors.
+    # Retaining FP8 tensors in the state dict can cause issues in the following two cases:
+    #   1. Sometimes, when the precision of the checkpoint is higher than that of the model params,
+    #      we want to directly use the state dict to initialize the main params. If the FP8 tensors
+    #      in this sharded state dict are not converted to high-precision tensors, the loaded
+    #      tensors will already be quantized, which defeats the purpose of initializing the main
+    #      params with a high-precision state dict;
+    #   2. When using delayed scaling, this loading process writes an extra value into the global
+    #      amax_history buffer of Transformer Engine, which is undesirable.
+    
+    # This causes OOM. commenting it out.
+    #force_all_tensors_to_non_fp8(sharded_state_dict)
+
+    common_state_dict = common_strategy.load_common(checkpoint_dir)
+
+    sharded_state_dict, nonpersistent_state_dict, sh_ten_factories = load_preprocess(
+        sharded_state_dict
+    )
+    merge(common_state_dict, nonpersistent_state_dict)
+
+    # At this point we are only dealing with ShardedBase objects
+    sharded_state_dict, _ = extract_sharded_base(sharded_state_dict)
+
+    # Validation
+    ckpt_sharded_metadata = None
+    local_metadata, global_metadata = None, None
+    strict = parse_strict_flag(strict)
+    if StrictHandling.requires_explicit_ckpt_mismatch_check(strict):
+        ckpt_sharded_metadata = load_sharded_metadata(
+            checkpoint_dir, sharded_strategy, common_strategy  # type: ignore[arg-type]
+        )
+    if validate_access_integrity or StrictHandling.requires_global_app_metadata(strict):
+        local_metadata, global_metadata = determine_global_metadata(sharded_state_dict)
+
+    sharded_state_dict, missing_keys, unexpected_keys = validate_integrity_and_strict_load(
+        sharded_state_dict,
+        strict,
+        validate_access_integrity,
+        local_metadata,
+        global_metadata,
+        ckpt_sharded_metadata,
+    )
+
+    # ShardedBase loading
+    if not sharded_strategy.can_handle_sharded_objects:
+        validate_sharded_objects_handling(sharded_strategy, common_strategy)
+        sharded_objects_state_dict, sharded_state_dict = extract_matching_values(
+            sharded_state_dict, lambda v: isinstance(v, ShardedObject)
+        )
+        sharded_objects = common_strategy.load_sharded_objects(
+            sharded_objects_state_dict, checkpoint_dir
+        )
+        merge(common_state_dict, sharded_objects)
+
+    loaded_state_dict = sharded_strategy.load(sharded_state_dict, checkpoint_dir)
+
+    merge(common_state_dict, loaded_state_dict)
+
+    loaded_state_dict = apply_factory_merges(common_state_dict, sh_ten_factories)
+
+    if StrictHandling.requires_returning_mismatch_keys(strict):
+        return common_state_dict, missing_keys, unexpected_keys
+    else:
+        return common_state_dict
+
+megatron.core.dist_checkpointing.load = new_load
 
 import hydra
 import torch
 from custom_callbacks import MetricsLogger
 from custom_llama import CustomLlamaModel
-from nemo.lightning.pytorch.strategies.utils import _destroy_dist_connection
 from lightning.pytorch import seed_everything
 from megatron.core import parallel_state
 from megatron.core.distributed import DistributedDataParallelConfig
@@ -62,6 +157,24 @@ from nemo.lightning.pytorch.optim import CosineAnnealingScheduler
 from nemo.lightning.pytorch.strategies.utils import RestoreConfig
 from omegaconf import DictConfig
 from omegaconf.omegaconf import OmegaConf
+
+
+from nemo.collections.llm.fn.base import _map_module
+
+
+def _map(
+    module,
+    func,
+    leaf_only: bool = False,
+    **kwargs,
+):
+    return _map_module(module, func, leaf_only=leaf_only, **kwargs)
+
+
+# Replace the original map function
+import nemo.collections.llm.fn.base
+
+nemo.collections.llm.fn.base.map = _map
 
 
 def init_mp_state(cfg, cp):
@@ -144,6 +257,7 @@ def prepare_dataset(
         global_batch_size=cfg.model.global_batch_size,
         persistent_workers=True,
         seed=cfg.model.seed,
+        num_workers=cfg.dataloader.num_workers,
         packed_sequence_specs=packed_sequence_specs,
         dataset_kwargs={
             "return_cu_seqlen": False,
@@ -206,6 +320,7 @@ def prepare_model(tokenizer: AutoTokenizer, cfg: DictConfig):
         dropout_position="pre",
         lora_A_init_method="kaiming",
         target_modules=["linear_proj", "linear_qkv"],
+        dropout_recompute=cfg.model.dropout_recompute,
     )
 
     llama2_config = llm.Llama2Config70B(
@@ -216,17 +331,28 @@ def prepare_model(tokenizer: AutoTokenizer, cfg: DictConfig):
         fp8_dot_product_attention=cfg.model.fp8_dot_product_attention,
         cross_entropy_loss_fusion=False,
         activation_func_fp8_input_store=cfg.model.activation_func_fp8_input_store,
-        # Temporarily disable gradient_accumulation_fusion as MCore optimizer doesn't support this
-        gradient_accumulation_fusion=False if cfg.model.external_cuda_graph else True,
+        gradient_accumulation_fusion=False,
         bias_dropout_fusion=True,
         disable_parameter_transpose_cache=False,
         external_cuda_graph=cfg.model.external_cuda_graph,
         enable_cuda_graph=cfg.model.enable_cuda_graph,
+        cuda_graph_scope=cfg.model.cuda_graph_scope,
         cpu_offloading=cfg.model.cpu_offloading,
         cpu_offloading_num_layers=cfg.model.cpu_offloading_num_layers,
         cpu_offloading_activations=cfg.model.cpu_offloading_activations,
         cpu_offloading_weights=cfg.model.cpu_offloading_weights,
+        cpu_offloading_double_buffering=cfg.model.cpu_offloading_double_buffering,
+        recompute_granularity=cfg.model.recompute_granularity,
+        recompute_method=cfg.model.recompute_method,
+        recompute_num_layers=cfg.model.recompute_num_layers,
+        distribute_saved_activations=cfg.model.distribute_saved_activations,
+        recompute_modules=cfg.model.recompute_modules,
+        use_transformer_engine_op_fuser=cfg.model.use_transformer_engine_op_fuser,
+        fused_single_qkv_rope=cfg.model.fused_single_qkv_rope,
+        fp4_param=cfg.model.fp4_param,
+        fp4=cfg.model.fp4,
     )
+
     llama2_config.cp_eval = cfg.model.eval_cp
     model = CustomLlamaModel(llama2_config, tokenizer=tokenizer)
     resume = None
@@ -243,7 +369,7 @@ def prepare_model(tokenizer: AutoTokenizer, cfg: DictConfig):
 
 
 def prepare_training_strategy(
-    cfg: DictConfig
+    cfg: DictConfig,
 ) -> tuple[nl.MegatronStrategy, nl.MegatronMixedPrecision, MegatronCommOverlapCallback]:
     def validation_step_patch(self, dataloader_iter, *args, **kwargs):
         with self.precision_plugin.val_step_context():
@@ -254,25 +380,52 @@ def prepare_training_strategy(
 
     nl.MegatronStrategy.validation_step = validation_step_patch
 
+    def teardown_patch(self):
+        return
+
+    nl.MegatronStrategy.teardown = teardown_patch
+    data_parallel_sharding_strategy = (
+        "optim_grads_params" if cfg.model.fsdp == "megatron" else "no_shard"
+    )
+
+    # Create cluster environment for the strategy
+    # This fixed issues with interactively testing multi-node configs
+    from lightning.pytorch.plugins.environments import SLURMEnvironment
+    cluster_env = SLURMEnvironment() if "SLURM_PROCID" in os.environ else None
+
     strategy = nl.MegatronStrategy(
         tensor_model_parallel_size=cfg.model.tensor_model_parallel_size,
         pipeline_model_parallel_size=cfg.model.pipeline_model_parallel_size,
         context_parallel_size=cfg.model.context_parallel_size,
         sequence_parallel=cfg.model.sequence_parallel,
         pipeline_dtype=torch.bfloat16,
+        cluster_environment=cluster_env,
         ckpt_load_directly_on_device=False,
         ckpt_parallel_load=False,
+        ckpt_load_optimizer=False,
+        ckpt_load_main_params=False,
         ckpt_load_strictness="log_all",
         gradient_as_bucket_view=True,
         use_te_rng_tracker=cfg.model.use_te_rng_tracker,
+        fsdp=cfg.model.fsdp,
+        use_sharp=cfg.model.use_sharp,
         ddp=DistributedDataParallelConfig(
             overlap_grad_reduce=cfg.ddp.overlap_grad_reduce,
             overlap_param_gather=cfg.ddp.overlap_param_gather,
             fp8_param_gather=cfg.ddp.fp8_param_gather,
             average_in_collective=cfg.ddp.average_in_collective,
             use_distributed_optimizer=cfg.optim.use_distributed_optimizer,
+            use_custom_fsdp=cfg.model.fsdp == "megatron",
+            data_parallel_sharding_strategy=data_parallel_sharding_strategy,
+            nccl_ub=cfg.ddp.nccl_ub,
+            fsdp_double_buffer=cfg.ddp.nccl_ub,
         ),
     )
+
+    assert not (cfg.model.fp8 and cfg.model.fp4), "fp8 and fp4 cannot be enabled at the same time"
+
+    fp8_type = "hybrid" if cfg.model.fp8 else None
+    fp4_type = "e2m1" if cfg.model.fp4 else None
 
     precision = nl.MegatronMixedPrecision(
         precision="bf16-mixed",
@@ -280,14 +433,23 @@ def prepare_training_strategy(
         pipeline_dtype=torch.bfloat16,
         autocast_enabled=True,
         grad_reduce_in_fp32=False,
-        fp8="hybrid",
+        first_last_layers_bf16=cfg.model.first_last_layers_bf16,
+        num_layers_at_start_in_bf16=cfg.model.num_layers_at_start_in_bf16,
+        num_layers_at_end_in_bf16=cfg.model.num_layers_at_end_in_bf16,
+        # fp4
+        fp4=fp4_type,
+        fp4_recipe=cfg.model.fp4_recipe,
+        # fp8
+        fp8=fp8_type,
+        fp8_recipe=cfg.model.fp8_recipe,
         fp8_amax_history_len=cfg.model.fp8_amax_history_len,
         fp8_amax_compute_algo=cfg.model.fp8_amax_compute_algo,
-        fp8_params=cfg.model.fp8_params,
+        fp8_param_gather=cfg.model.fp8_param_gather,
         fp8_dot_product_attention=cfg.model.fp8_dot_product_attention,
     )
 
     tp_comm_overlap_cfg = None
+    overlap_callback = None
     if cfg.model.ub_tp_comm_overlap:
         tp_comm_overlap_cfg = OmegaConf.to_container(cfg.model.ub_tp_comm_overlap_cfg)
         TPCommOverlapConfig = make_dataclass(
@@ -296,21 +458,23 @@ def prepare_training_strategy(
         )
         tp_comm_overlap_cfg = TPCommOverlapConfig(**tp_comm_overlap_cfg)
 
-    overlap_callback = MegatronCommOverlapCallback(
-        tp_comm_overlap=cfg.model.ub_tp_comm_overlap,
-        tp_comm_overlap_cfg=tp_comm_overlap_cfg,
-        overlap_grad_reduce=cfg.ddp.overlap_grad_reduce,
-        overlap_param_gather=cfg.ddp.overlap_param_gather,
-        overlap_param_gather_with_optimizer_step=cfg.optim.overlap_param_gather_with_optimizer_step,
-    )
+        overlap_callback = MegatronCommOverlapCallback(
+            tp_comm_overlap=cfg.model.ub_tp_comm_overlap,
+            tp_comm_overlap_cfg=tp_comm_overlap_cfg,
+            overlap_grad_reduce=cfg.ddp.overlap_grad_reduce,
+            overlap_param_gather=cfg.ddp.overlap_param_gather,
+            overlap_param_gather_with_optimizer_step=cfg.optim.overlap_param_gather_with_optimizer_step,
+        )
 
     return strategy, precision, overlap_callback
 
 
 OmegaConf.register_new_resolver("add", lambda x, y: x + y)
 OmegaConf.register_new_resolver("floor_div", lambda x, y: x // y)
+OmegaConf.register_new_resolver("ceil_div", lambda x, y: ceil(x / y))
 OmegaConf.register_new_resolver("if", lambda x, y, z: y if x else z)
-OmegaConf.register_new_resolver("floor", lambda x: int(x // 1))
+OmegaConf.register_new_resolver("floor", lambda x: floor(x))
+OmegaConf.register_new_resolver("ceil", lambda x: ceil(x))
 
 
 @hydra.main(
@@ -318,17 +482,18 @@ OmegaConf.register_new_resolver("floor", lambda x: int(x // 1))
 )
 def main(cfg: DictConfig) -> None:
     OmegaConf.resolve(cfg)
-    assert (
-        cfg.model.eval_cp == 1 or cfg.model.eval_cp is None
-    ), "model.eval_cp must be set to 1 or left unset"
+    assert cfg.model.eval_cp == 1 or cfg.model.eval_cp is None, (
+        "model.eval_cp must be set to 1 or left unset"
+    )
 
     if get_rank() == 0:
         mllogger.start(key=mllogger.constants.INIT_START)
         mllogger.mlperf_submission_log(
             benchmark="llama2_70b_lora", num_nodes=cfg.trainer.num_nodes
         )
+        mllogger.event(key="target_accuracy", value=0.925)
 
-    tokenizer = AutoTokenizer("/ckpt/context/nemo_tokenizer")
+    tokenizer = AutoTokenizer(f"{cfg.ckpt_root}/context/nemo_tokenizer")
     data = prepare_dataset(cfg, tokenizer)
 
     optimizer = prepare_optimizer(
@@ -351,6 +516,10 @@ def main(cfg: DictConfig) -> None:
             value=cfg.trainer.max_steps,
         )
 
+    callbacks = []
+    if overlap_callback:
+        callbacks.append(overlap_callback)
+
     trainer = nl.Trainer(
         max_steps=cfg.trainer.max_steps,
         limit_val_batches=cfg.trainer.limit_val_batches,
@@ -367,7 +536,7 @@ def main(cfg: DictConfig) -> None:
         enable_progress_bar=False,
         use_distributed_sampler=False,
         log_every_n_steps=0,
-        callbacks=[overlap_callback],
+        callbacks=callbacks,
         logger=logger,
     )
     logger.set_trainer(trainer)
@@ -385,15 +554,16 @@ def main(cfg: DictConfig) -> None:
         model_transform=peft,
     )
     trainer.callbacks.append(custom_callback)
-    if os.environ.get("DEBUGGING_CALLBACK", "False").lower() in ("true", "1", "t"):
+
+    if fname := os.environ.get('STAT_CALLBACK_FNAME'):
         from mlperf_common.callbacks import StatsLogCallback
-        trainer.callbacks.append(StatsLogCallback())
+        trainer.callbacks.append(StatsLogCallback(save_path=fname))
+
     if get_rank() == 0:
         mllogger.event(key=mllogger.constants.SEED, value=cfg.model.seed, sync=False)
     seed_everything(cfg.model.seed, workers=True, verbose=False)
     gc.disable()
     trainer.fit(model, data)
-    atexit.unregister(_destroy_dist_connection)
 
 
 if __name__ == "__main__":

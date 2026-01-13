@@ -24,7 +24,13 @@ RUN git config --global user.name "a" && \
 
 ENV PIP_CONSTRAINT=""
 
-RUN pip install numcodecs==0.13.1
+#RUN pip install numcodecs==0.13.1
+RUN NVARCH=$(uname -m |grep x86_64 2>/dev/null || echo sbsa) && \
+    curl -fsSL https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/${NVARCH}/3bf863cc.pub > /etc/apt/trusted.gpg.d/cuda.asc && \
+    echo "deb https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/${NVARCH} /" > /etc/apt/sources.list.d/cuda.list && \
+    apt-get update && apt-get install -y libcudnn9-cuda-13=9.13.1.26-1 && rm -rf /var/lib/apt/lists/*
+ENV CUDNN_VERSION=9.13.1.26
+RUN pip install nvidia-mathdx==25.1.1
 
 ## NeMo
 ARG NEMO_REVISION=25.09-alpha.rc2
@@ -33,7 +39,7 @@ RUN git clone https://github.com/NVIDIA/NeMo.git && \
     git checkout ${NEMO_REVISION} && \
     echo NEMO_COMMIT_HASH=$(git rev-parse HEAD) && \
     echo $(git rev-parse HEAD) > /NEMO_COMMIT_HASH.env && \
-    pip install -e ".[nlp]"
+    pip install -e ".[llm]"
 
 ## Megatron-core
 ARG MCORE_REVISION=25.09-alpha.rc1
@@ -43,25 +49,38 @@ RUN pip uninstall -y megatron-core && \
     git checkout ${MCORE_REVISION} && \
     echo MCORE_COMMIT_HASH=$(git rev-parse HEAD) && \
     echo $(git rev-parse HEAD) > /MCORE_COMMIT_HASH.env && \
-    pip install . && \
+    pip install -e . && \
     cd megatron/core/datasets && \
     make
 ENV PYTHONPATH="/workspace/ft-llm/Megatron-LM"
 
 ## TransformerEngine
-ARG TE_REVISION=SKIP
-ENV CUSTOM_TE_REVISION=${TE_REVISION}
-
+ARG TE_REVISION=release_v2.8
 RUN if [ "${TE_REVISION}" != SKIP ]; then \
     pip uninstall -y transformer_engine && \
-    git clone https://github.com/NVIDIA/TransformerEngine && \
+    git clone https://github.com/NVIDIA/TransformerEngine.git && \
     cd TransformerEngine && \
     git checkout ${TE_REVISION} && \
     echo TE_COMMIT_HASH=$(git rev-parse HEAD) && \
     echo $(git rev-parse HEAD) > /TE_COMMIT_HASH.env && \
     git submodule init && git submodule update && \
-    NVTE_CUDA_ARCHS="90;100" NVTE_UB_WITH_MPI=1 NVTE_FRAMEWORK=pytorch NVTE_WITH_USERBUFFERS=1 MPI_HOME=/usr/local/mpi pip install --force-reinstall --no-deps . \
+    git -C 3rdparty/cudnn-frontend checkout 80a8e4af4d89d33a2c59d51fcf9fda1c9d368cd4 && \
+    git -C 3rdparty/googletest checkout f8d7d77c06936315286eb55f8de22cd23c188571 && \
+    git -C 3rdparty/cutlass checkout 57e3cfb47a2d9e0d46eb6335c3dc411498efa198 && \
+    NVTE_CUDA_ARCHS="90;100" NVTE_BUILD_ACTIVATION_WITH_FAST_MATH=1 NVTE_UB_WITH_MPI=1 NVTE_FRAMEWORK=pytorch NVTE_WITH_USERBUFFERS=1 MPI_HOME=/usr/local/mpi pip install --no-build-isolation . \
     ; fi
+
+# Install NCCL v2.28.3-1:
+ARG NCCL_REVISION=v2.28.3-1
+RUN export DEBIAN_FRONTEND=noninteractive &&        \
+    apt-get update &&                               \
+    apt-get remove -y libnccl2 &&                   \
+    git clone https://github.com/NVIDIA/nccl.git && \
+    cd nccl &&                                      \
+    echo "NCCL_REVISION=${NCCL_REVISION}" &&      \
+    git checkout "${NCCL_REVISION}" &&             \
+    make -j24 install
+ENV NCCL_VERSION="${NCCL_REVISION}"
 
 ## fix opencc
 RUN apt-get update && apt-get install -y --no-install-recommends libopencc-dev
@@ -69,6 +88,4 @@ RUN apt-get update && apt-get install -y --no-install-recommends libopencc-dev
 ADD . /workspace/ft-llm
 
 RUN pip install -r requirements.txt
-
-## fix bitsandbytes version
-RUN pip install --upgrade bitsandbytes==0.48.1
+RUN pip uninstall -y bitsandbytes

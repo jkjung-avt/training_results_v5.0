@@ -12,30 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from nemo.lightning import teardown
 from nemo.collections import llm
-from nemo.collections.llm.gpt.model.llama import HFLlamaImporter
 from huggingface_hub import snapshot_download
 from pathlib import Path
 import argparse
 import shutil
 
-def apply(self, output_path: Path) -> Path:
-    """ modify to save ckpt in zarr format """
-    from transformers import LlamaForCausalLM
-    source = LlamaForCausalLM.from_pretrained(str(self), torch_dtype='auto')
-    target = self.init()
-    trainer = self.nemo_setup(target, save_ckpt_format='zarr', async_save=False, parallel_save=False)
-    trainer.strategy.async_save = False
-    trainer.strategy.parallel_save = False
-    self.convert_state(source, target)
-    self.nemo_save(output_path, trainer)
-    print(f"Converted Llama model to Nemo, model saved to {output_path} in {source.dtype}.")
-    teardown(trainer, target)
-    del trainer, target
-    return output_path
-
-HFLlamaImporter.apply = apply
 
 # This script requires one of the following setups:
 # 1. Set the HF_HOME environment variable to the directory where the model is downloaded:

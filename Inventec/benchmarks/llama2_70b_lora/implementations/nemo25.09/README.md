@@ -68,33 +68,27 @@ Step-by-step
    This 1st script takes less than 1 minute.  The second script could take up to 30 minutes.  After both scripts finish, you should see the following files in the `/data` directory:
 
    ```
+   $tree /data
    /data
-   ├── gov_report
-   │   ├── train.npy
-   │   └── validation.npy
-   └── model
-       ├── context
-       │   ├── io.json
-       │   ├── model.yaml
-       │   └── nemo_tokenizer
-       └── weights
-           ├── common.pt
-           ├── metadata.json
-           ├── module.decoder.final_layernorm._extra_state
-           ├── module.decoder.final_layernorm.weight
-           ├── module.decoder.layers.mlp.linear_fc1._extra_state
-           ├── module.decoder.layers.mlp.linear_fc1.layer_norm_weight
-           ├── module.decoder.layers.mlp.linear_fc1.weight
-           ├── module.decoder.layers.mlp.linear_fc2._extra_state
-           ├── module.decoder.layers.mlp.linear_fc2.weight
-           ├── module.decoder.layers.self_attention.core_attention._extra_state
-           ├── module.decoder.layers.self_attention.linear_proj._extra_state
-           ├── module.decoder.layers.self_attention.linear_proj.weight
-           ├── module.decoder.layers.self_attention.linear_qkv._extra_state
-           ├── module.decoder.layers.self_attention.linear_qkv.layer_norm_weight
-           ├── module.decoder.layers.self_attention.linear_qkv.weight
-           ├── module.embedding.word_embeddings.weight
-           └── module.output_layer.weight
+   |-- gov_report
+   |   |-- train.npy
+   |   `-- validation.npy
+   `-- model
+       |-- context
+       |   |-- artifacts
+       |   |   `-- generation_config.json
+       |   |-- io.json
+       |   |-- model.yaml
+       |   `-- nemo_tokenizer
+       |       |-- special_tokens_map.json
+       |       |-- tokenizer.json
+       |       |-- tokenizer.model
+       |       `-- tokenizer_config.json
+       `-- weights
+           |-- __0_0.distcp
+           |-- __0_1.distcp
+           |-- common.pt
+           `-- metadata.json
    ```
 
    Exit the container.

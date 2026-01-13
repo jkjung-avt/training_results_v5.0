@@ -14,6 +14,7 @@
 
 import argparse
 import logging
+import subprocess
 from huggingface_hub import snapshot_download
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -22,7 +23,7 @@ logger = logging.getLogger(__name__)
 def download_model(model_dir: str, max_workers: int):
     try:
         snapshot_download(
-            "michal1270/llama2_70b_nemo_zarr",
+            "michal1270/llama2_70b_nemo_torch_dist",
             local_dir=model_dir,
             max_workers=max_workers
         )
@@ -42,3 +43,7 @@ def parse_arguments():
 if __name__ == "__main__":
     args = parse_arguments()
     download_model(args.model_dir, args.max_workers)
+
+    for p in ["__0_0", "__0_1"]:
+        subprocess.run(["bash", "-lc", f"cat {args.model_dir}/weights/{p}.distcp0.part {args.model_dir}/weights/{p}.distcp1.part > {args.model_dir}/weights/{p}.distcp \
+            && rm -f {args.model_dir}/weights/{p}.distcp0.part {args.model_dir}/weights/{p}.distcp1.part"], check=True)

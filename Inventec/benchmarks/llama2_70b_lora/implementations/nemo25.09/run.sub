@@ -29,7 +29,7 @@ echo "PROLOG_START $(date +%s)"
 
 # Vars with defaults
 : "${CHECK_COMPLIANCE:=1}"
-: "${MLPERF_RULESET:=5.0.0}"
+: "${MLPERF_RULESET:=5.1.0}"
 : "${MLPERF_SYSTEM_NAME:='unknown'}"
 : "${MLPERF_SCALE:='unknown'}"
 : "${MLPERF_CLUSTER_NAME:='unknown'}"
@@ -119,6 +119,20 @@ export MLPERF_HOST_OS
 ( umask 0002; mkdir -p "${LOGDIR}" )
 srun --ntasks-per-node=1 mkdir -p "${LOGDIR}"
 
+# do we need to fetch the data from remote disk into node local nvme?
+if [[ "${SLOW_DATADIR:-}" ]]; then
+    if [[ -z "${DATADIR:-}" ]]; then
+        echo "ERROR: DATADIR is not defined"
+        exit 1
+    fi
+    srun --ntasks-per-node=1 /bin/bash -c '
+        set -euo pipefail
+        umask 0000
+        mkdir -p "${DATADIR}"
+        rsync -av --whole-file --chmod=ugo+rwx "${SLOW_DATADIR}/" "${DATADIR}"
+        ' > "${_logfile_base}"_rsync.log
+fi
+
 # Setup container
 srun --ntasks-per-node=1 --container-image="${CONT_FILE}" --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" true
 srun -N1 -n1 --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" ibv_devinfo --list
@@ -135,7 +149,7 @@ if [[ ${NCCL_TEST} -eq 1 ]]; then
     set +e
     echo "NCCL_TEST_START $(date +%s)"
     (srun --mpi="${SLURM_MPI_TYPE:-pmix}" --ntasks-per-node="${DGXNGPU}" \
-         --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" --time="${NCCL_TEST_WALLTIME}" all_reduce_perf_mpi -b 62M -e 62M -d half
+         --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" --time="${NCCL_TEST_WALLTIME}" all_reduce_perf_mpi -b 62M -e 2G -f 2 -d half
     ) |& tee "${LOGDIR}/${SPREFIX}_nccl.log"
     echo "NCCL_TEST_STOP $(date +%s)"
     set -e
@@ -168,25 +182,33 @@ if [ -f "$POWERCMDDIR/power_monitor.sh"  ]; then
     fi
 fi
 
-# Telemetry
-if [[ -f "${TELEMETRY_SCRIPT:-}"  ]]; then
+# CPU power measurements
+if [[ -f "${GRACE_POWER_SCRIPT:-}"  ]]; then
     NODENAME=$(echo "$(hostname)" | sed 's/\..*//')
-    ( srun -N1 --overlap bash ${TELEMETRY_SCRIPT} ${LOGDIR}/${SLURM_JOB_ID}_${NODENAME}_telemetry.log ) &
-    EXTRA_ASSETS="${EXTRA_ASSETS} --asset /results/${SLURM_JOB_ID}_${NODENAME}_telemetry.log"
+    ( srun --overlap --ntasks-per-node=1 bash ${GRACE_POWER_SCRIPT} ) &
+    EXTRA_ASSETS="${EXTRA_ASSETS} --asset /results/cpu_power/${SLURM_JOB_ID}_${NODENAME}_cpu_power.log"
 fi
 
-#Set GPU clocks for MaxQ and MinEDP run
+# GPU Telemetry
+if [[ -f "${TELEMETRY_SCRIPT:-}"  ]]; then
+    NODENAME=$(echo "$(hostname)" | sed 's/\..*//')
+    TELEMETRY_FNAME="/results/gpu_telemetry/${SLURM_JOB_ID}_${NODENAME}_gpu_telemetry.log"
+    ( srun -N1 --overlap bash ${TELEMETRY_SCRIPT} ) &
+    EXTRA_ASSETS="${EXTRA_ASSETS} --asset ${TELEMETRY_FNAME}"
+fi
+
+# Set GPU clocks for MaxQ and MinEDP run
 if [[ "${SET_MAXQ_CLK}" == "1" ]] || [[ "${SET_MINEDP_CLK}" == "1" ]]; then
-        if [[ "${SET_MAXQ_CLK}" == "1" ]]; then
-                GPC_CLK=${MAXQ_CLK}
-        fi
-        if [[ "${SET_MINEDP_CLK}" == "1" ]]; then
-                GPC_CLK=${MINEDP_CLK}
-        fi
+    if [[ "${SET_MAXQ_CLK}" == "1" ]]; then
+        GPC_CLK=${MAXQ_CLK}
+    fi
+    if [[ "${SET_MINEDP_CLK}" == "1" ]]; then
+        GPC_CLK=${MINEDP_CLK}
+    fi
     srun --ntasks-per-node=1 bash -c "sudo nvidia-smi -lgc ${GPC_CLK}"
 fi
 
-#Set the value for nvidia-smi boost-slider --vboost
+# Set the value for nvidia-smi boost-slider --vboost
 if [ ${VBOOST_VALUE:-0} -gt 0 ]; then
     srun --ntasks-per-node=1 bash -c "sudo nvidia-smi boost-slider --vboost ${VBOOST_VALUE}"
 fi
@@ -194,6 +216,11 @@ fi
 echo "PROLOG_STOP $(date +%s)"
 
 for _experiment_index in $(seq 1 "${NEXP}"); do
+    if [[ ${STATS_CALLBACK:-0} -eq 1 ]]; then
+      export STAT_CALLBACK_FNAME="/results/${LOGBASE}_${_experiment_index}_stats.json"
+      EXTRA_ASSETS="${EXTRA_ASSETS} --asset ${STAT_CALLBACK_FNAME}"
+    fi
+
     echo "EXPERIMENT_START $(date +%s)"
 
     (
@@ -216,12 +243,12 @@ mllogger.event(key=mllogger.constants.CACHE_CLEAR, value=True)"
         set +e
         echo "RUNANDTIME_START $(date +%s)"
         srun -l --mpi="${SLURM_MPI_TYPE:-pmix}" \
-         --ntasks-per-node="${DGXNGPU}" \
-         --time="${WALLTIME_RUNANDTIME}" \
-         --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" \
-         --container-mounts="${_cont_mounts}" \
-         --container-workdir="${WORK_DIR}" \
-         --container-env=MASTER_PORT,MASTER_ADDR \
+             --ntasks-per-node="${DGXNGPU}" \
+             --time="${WALLTIME_RUNANDTIME}" \
+             --container-name="${_cont_name}" "${PYXIS_DEFAULTS[@]}" \
+             --container-mounts="${_cont_mounts}" \
+             --container-workdir="${WORK_DIR}" \
+             --container-env=MASTER_PORT,MASTER_ADDR \
              slurm2pytorch ./run_and_time.sh
         echo "RUNANDTIME_STOP $(date +%s)"
         set -e

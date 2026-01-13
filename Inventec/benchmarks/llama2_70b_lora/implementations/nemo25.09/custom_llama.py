@@ -21,15 +21,41 @@ from torch.utils.data import default_collate
 from nemo.lightning.megatron_parallel import MegatronLossReduction
 from typing import Dict, List, Tuple
 from megatron.core import parallel_state
-from nemo.collections.nlp.modules.common.megatron.utils import average_losses_across_data_parallel_group
 
 
 def run_training_warmup(trainer, warmup_train_steps, warmup_validation_steps):
     trainer.warmup = True
     torch.distributed.barrier()
+    optimizer = trainer.strategy.optimizers[0]
+    for group in optimizer.param_groups:
+        group["betas_"] = group["betas"]
+        group["bias_correction_"] = group["bias_correction"]
+        group["betas"] = [1.0, 1.0]
+        group["bias_correction"] = False
+        group["weight_decay_"] = group["weight_decay"]
+        group["weight_decay"] = 0.0
+        group["pre_mult_wd_"] = group["pre_mult_wd"]
+        group["pre_mult_wd"] = 0.0
+
     for _ in range(warmup_train_steps):
         trainer.model.training_step(trainer.model.get_synthetic_input())
+        optimizer.zero_grad()
+        optimizer.step()
+        optimizer.zero_grad()
     torch.distributed.barrier()
+
+    # Recover optimizer configs changed by warmup
+    for group in optimizer.param_groups:
+        group["betas"] = group["betas_"]
+        group["bias_correction"] = group["bias_correction_"]
+        group["weight_decay"] = group["weight_decay_"]
+        group["pre_mult_wd"] = group["pre_mult_wd_"]
+        del group["betas_"]
+        del group["bias_correction_"]
+        del group["weight_decay_"]
+        del group["pre_mult_wd_"]
+        if "step" in group:
+            del group["step"]
 
     if warmup_validation_steps > 0:
         with torch.no_grad():
@@ -37,7 +63,7 @@ def run_training_warmup(trainer, warmup_train_steps, warmup_validation_steps):
             trainer.training = False
             trainer.validating = True
             for _ in range(warmup_validation_steps):
-                trainer.model.validation_step(trainer.model.get_synthetic_input(validation=True))
+                trainer.model.validation_step(trainer.model.get_synthetic_input())
             trainer.fit_loop.epoch_loop.val_loop.on_run_end()
             trainer.training = True
             trainer.validating = False
@@ -61,15 +87,23 @@ def reset_fp8_state(model):
 
 class CustomLlamaModel(LlamaModel):
     def configure_model(self):
+        if not self.custom_callback.cfg.model.fp8:
+            super().configure_model()
+            return
+
         import transformer_engine.pytorch as te
+        import transformer_engine.common.recipe as te_recipe
+
         self.custom_callback.log_custom_timedelta("before_model_init")
-        with torch.no_grad(), te.fp8_model_init():
+        recipe = te_recipe.DelayedScaling()
+        with te.fp8_model_init(recipe=recipe):
             super().configure_model()
         self.custom_callback.log_custom_timedelta("after_model_init")
-        s = torch.cuda.Stream()
-        torch.cuda.set_stream(s)
+        if self.custom_callback.cfg.model.external_cuda_graph:
+            s = torch.cuda.Stream()
+            torch.cuda.set_stream(s)
 
-    def get_synthetic_input(self, validation=False):
+    def get_synthetic_input(self):
         # Needed because init_global_step is not initialized at warmup
         self.init_global_step = self.trainer.global_step
 
@@ -155,7 +189,7 @@ class MaskedTokenLossReduction(MegatronLossReduction):
                 torch.distributed.all_reduce(loss_sum_and_ub_size_all_gpu, group=parallel_state.get_data_parallel_group())
             return loss_for_ub, {"loss_sum_and_ub_size": loss_sum_and_ub_size_all_gpu}
 
-        reduced_loss = average_losses_across_data_parallel_group([loss_for_ub])
+        reduced_loss = loss_for_ub
         return loss_for_ub, {"avg": reduced_loss}
 
     def reduce(self, losses_reduced_per_micro_batch) -> torch.Tensor:
