@@ -5,15 +5,13 @@ source $(dirname ${BASH_SOURCE[0]})/config_common.sh
 # hyperparameters
 export MAX_STEPS=800
 export LR=0.0006
-export MINIBS=1
+export MINIBS=2
 export TP=8
 export CP=1
-export SP=0
-
 export FP8_ACT=1
 
-export MCORE_CUDA_GRAPH=1
-export NUM_WORKERS=4
+#export MCORE_CUDA_GRAPH=1
+#export NUM_WORKERS=4
 
 # To avoid OOM
 export NCCL_NVLS_ENABLE=0
