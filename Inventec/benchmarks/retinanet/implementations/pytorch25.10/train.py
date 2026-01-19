@@ -765,7 +765,7 @@ def main(args):
         while status != SUCCESS and len(async_executor.tags()):
             # FIXME(ahmadki): --num-eval-ranks
             if args.eval_rank == 0:
-                results = async_executor.pop_if_done()
+                results = async_executor.pop_if_done(blocking=True, timeout=10)
                 # in case of multiple results are returned, get the highest mAP
                 if results and len(results) > 0:
                     accuracy = max([result['bbox'][0] for result in results.values() if result], default=-1)
