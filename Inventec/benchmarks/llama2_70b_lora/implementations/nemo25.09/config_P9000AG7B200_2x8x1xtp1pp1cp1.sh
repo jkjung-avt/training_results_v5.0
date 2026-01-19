@@ -27,6 +27,8 @@ export DGXNGPU=8
 export WALLTIME_RUNANDTIME=25
 export WALLTIME=$((5 + ${NEXP:-1} * ($WALLTIME_RUNANDTIME + 5)))
 
+export PLATFORM_SRUN_OPTIONS='--export=ALL,UCX_NET_DEVICES="mlx5_0:1,mlx5_1:1,mlx5_2:1,mlx5_3:1,mlx5_10:1,mlx5_11:1,mlx5_12:1,mlx5_13:1"'
+
 # Inventec stuffs
 export MLPERF_SUBMITTER="Inventec Corporation"
 export MLPERF_SUBMISSION_ORG="Inventec Corporation"

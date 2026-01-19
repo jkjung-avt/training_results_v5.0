@@ -48,6 +48,7 @@ echo "PROLOG_START $(date +%s)"
 : "${MOUNTS:=${DATADIR}:/data,${DATADIR_VAL}:/data_val}"
 : "${LOGDIR:=./results}"
 : "${EXTRA_ASSETS:=}"
+: "${PLATFORM_SRUN_OPTIONS:=""}"
 
 # RUNSUB_DIR is the directory containing the run.sub script, so we can call
 # other scripts relative to the location of the run.sub script
@@ -64,7 +65,7 @@ fi
 ##############################################
 # FIXME: need to use --container-writable because some utilities are writing
 # into the container
-PYXIS_DEFAULTS=( '--no-container-mount-home' '--container-remap-root' '--container-writable' )
+PYXIS_DEFAULTS=( '--no-container-mount-home' '--container-remap-root' '--container-writable' ${PLATFORM_SRUN_OPTIONS} )
 
 ##############################################
 # We should invoke srun with exactly one of the following.

@@ -44,6 +44,7 @@ set -eux
 : "${EPOCH_PROF:=0}"
 : "${DISABLE_CG:=0}"
 : "${WORK_DIR:=/workspace/bert}"
+: "${PLATFORM_SRUN_OPTIONS:=""}"
 
 # Set GPC clock for MaxQ and minEDP
 : "${SET_MAXQ_CLK:=0}"
@@ -155,15 +156,15 @@ fi
 
 # Setup container
 echo MELLANOX_VISIBLE_DEVICES="${MELLANOX_VISIBLE_DEVICES:-}"
-srun --ntasks="$((SLURM_JOB_NUM_NODES))" --container-image="${CONT_FILE}" --container-name="${_cont_name}" true
-srun -N1 -n1 --container-name="${_cont_name}" ibv_devinfo --list
-srun -N1 -n1 --container-name="${_cont_name}" nvidia-smi topo -m
+srun --ntasks="$((SLURM_JOB_NUM_NODES))" --container-image="${CONT_FILE}" --container-name="${_cont_name}" ${PLATFORM_SRUN_OPTIONS} true
+srun -N1 -n1 --container-name="${_cont_name}" ${PLATFORM_SRUN_OPTIONS} ibv_devinfo --list
+srun -N1 -n1 --container-name="${_cont_name}" ${PLATFORM_SRUN_OPTIONS} nvidia-smi topo -m
 
 echo "NCCL_TEST = ${NCCL_TEST}"
 if [[ ${NCCL_TEST} -eq 1 ]]; then
     (srun --mpi="${SLURM_MPI_TYPE:-pmix}" \
           --ntasks="$(( SLURM_JOB_NUM_NODES * DGXNGPU ))" --ntasks-per-node="${DGXNGPU}" \
-          --container-name="${_cont_name}" \
+          --container-name="${_cont_name}" ${PLATFORM_SRUN_OPTIONS} \
           all_reduce_perf_mpi -b 21M -e 672M -d half -G 1 -f 2 ) |& tee "${LOGDIR}/${SPREFIX}_nccl.log"
 fi
 
@@ -202,7 +203,7 @@ for _experiment_index in $(seq -w 1 "${NEXP}"); do
         # Clear caches
         if [ "${CLEAR_CACHES}" -eq 1 ]; then
             srun --ntasks="${SLURM_JOB_NUM_NODES}" bash -c "echo -n 'Clearing cache on ' && hostname && sync && ${DROPCACHE_CMD}"
-            srun --ntasks="${SLURM_JOB_NUM_NODES}" --container-name="${_cont_name}" python -c "
+            srun --ntasks="${SLURM_JOB_NUM_NODES}" --container-name="${_cont_name}" ${PLATFORM_SRUN_OPTIONS} python -c "
 from mlperf_logger import mllogger
 mllogger.event(key=mllogger.constants.CACHE_CLEAR, value=True)"
         fi
@@ -210,14 +211,14 @@ mllogger.event(key=mllogger.constants.CACHE_CLEAR, value=True)"
         # Run experiment
         srun -l --mpi="${SLURM_MPI_TYPE:-pmix}" \
              --ntasks="$(( SLURM_JOB_NUM_NODES * DGXNGPU ))" --ntasks-per-node="${DGXNGPU}" \
-             --container-name="${_cont_name}" \
+             --container-name="${_cont_name}" ${PLATFORM_SRUN_OPTIONS} \
              --container-mounts="${_cont_mounts}" \
              --container-workdir=${WORK_DIR} \
              slurm2pytorch "./run_and_time.sh"
     ) |& tee "${LOG_FILE_BASE}_${_experiment_index}.log"
     # compliance checker
     if [ "${CHECK_COMPLIANCE}" -eq 1 ]; then
-        srun --ntasks=1 --nodes=1 --container-name="${_cont_name}" \
+        srun --ntasks=1 --nodes=1 --container-name="${_cont_name}" ${PLATFORM_SRUN_OPTIONS} \
              --container-mounts="$(realpath ${LOGDIR}):/results"   \
              --container-workdir="/results"                        \
              python3 -m mlperf_logging.compliance_checker --usage training \
@@ -229,7 +230,7 @@ mllogger.event(key=mllogger.constants.CACHE_CLEAR, value=True)"
 
     if [ "${JET:-0}" -eq 1 ]; then
         JET_CREATE="${JET_CREATE:-} --data workload.spec.nodes=${DGXNNODES} --data workload.spec.name=${MODEL_NAME}_${MODEL_FRAMEWORK}_${DGXSYSTEM} --data workload.key=${MODEL_NAME}_${MODEL_FRAMEWORK}_${DGXSYSTEM} --mllogger "
-        srun -N1 -n1 --container-name="${_cont_name}" --container-mounts="${_cont_mounts}" bash -c "${JET_CREATE} /results/${LOG_BASE}_${_experiment_index}.log && ${JET_UPLOAD}"
+        srun -N1 -n1 --container-name="${_cont_name}" ${PLATFORM_SRUN_OPTIONS} --container-mounts="${_cont_mounts}" bash -c "${JET_CREATE} /results/${LOG_BASE}_${_experiment_index}.log && ${JET_UPLOAD}"
     fi
 done
 

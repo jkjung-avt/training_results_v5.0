@@ -80,6 +80,7 @@ export SHARE_RERUNS=${SHARE_RERUNS:=0}
 : "${VBOOST_VALUE:=0}"
 # Memory monitor
 : "${MEM_MONITOR:=0}"
+: "${PLATFORM_SRUN_OPTIONS:=""}"
 
 # override enroot's (sometimes in-use) randomly chosen ephemeral port.  29500
 # is non-ephemeral and not assigned by the IANA.  If 29500 is in use on your
@@ -136,7 +137,7 @@ scontrol show hostnames "$SLURM_JOB_NODELIST" | sort | awk '{ for (i=0; i<'${DGX
 # download, and triton are writing into the container instead of a writable
 # mounted file system
 # PYXIS_DEFAULTS=( '--no-container-mount-home' '--no-container-remap-root' '--container-writable' )
-PYXIS_DEFAULTS=( '--no-container-mount-home' '--container-remap-root' '--container-writable' )
+PYXIS_DEFAULTS=( '--no-container-mount-home' '--container-remap-root' '--container-writable' ${PLATFORM_SRUN_OPTIONS} )
 
 ##############################################
 # We should invoke srun with exactly one of the following.
