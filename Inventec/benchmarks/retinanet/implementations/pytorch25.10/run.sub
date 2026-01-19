@@ -44,6 +44,7 @@ echo "PROLOG_START $(date +%s)"
 : "${DROPCACHE_CMD:="sudo /sbin/sysctl vm.drop_caches=3"}"
 : "${SCRATCH_SPACE:="/raid/scratch"}"
 : "${EXTRA_MOUNTS:=""}"
+: "${PLATFORM_SRUN_OPTIONS:=""}"
 
 # override enroot's (sometimes in-use) randomly chosen ephemeral port.  29500
 # is non-ephemeral and not assigned by the IANA.  If 29500 is in use on your
@@ -89,7 +90,7 @@ fi
 ##############################################
 # FIXME: need to use --container-writable because some utilities are writing
 # into the container
-PYXIS_DEFAULTS=( '--no-container-mount-home' '--container-remap-root' '--container-writable' ${PLATFORM_SRUN_OPTIONS[@]} )
+PYXIS_DEFAULTS=( '--no-container-mount-home' '--container-remap-root' '--container-writable' ${PLATFORM_SRUN_OPTIONS} )
 
 ##############################################
 # We should invoke srun with exactly one of the following.
