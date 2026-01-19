@@ -765,7 +765,7 @@ def main(args):
         while status != SUCCESS and len(async_executor.tags()):
             # FIXME(ahmadki): --num-eval-ranks
             if args.eval_rank == 0:
-                results = async_executor.pop_if_done(blocking=True, timeout=10)
+                results = async_executor.pop_if_done()
                 # in case of multiple results are returned, get the highest mAP
                 if results and len(results) > 0:
                     accuracy = max([result['bbox'][0] for result in results.values() if result], default=-1)
@@ -776,6 +776,7 @@ def main(args):
             if args.target_map and accuracy and accuracy >= args.target_map:
                 status = SUCCESS
                 mllogger.end(key=RUN_STOP, metadata={"status": status}, sync=True)
+        async_executor.shutdown(wait=False)
 
     run_time = time.time() - start_time
     run_time_str = str(datetime.timedelta(seconds=int(run_time)))
