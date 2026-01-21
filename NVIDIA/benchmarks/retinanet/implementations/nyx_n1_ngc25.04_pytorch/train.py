@@ -786,3 +786,5 @@ def main(args):
 if __name__ == "__main__":
     args = parse_args()
     main(args)
+    import os
+    os._exit(0)  # workaround for the problem of rank 0 hanging very long (likely due to async_executor)
