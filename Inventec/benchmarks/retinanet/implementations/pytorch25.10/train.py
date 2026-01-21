@@ -776,7 +776,6 @@ def main(args):
             if args.target_map and accuracy and accuracy >= args.target_map:
                 status = SUCCESS
                 mllogger.end(key=RUN_STOP, metadata={"status": status}, sync=True)
-        async_executor.shutdown(wait=False)
 
     run_time = time.time() - start_time
     run_time_str = str(datetime.timedelta(seconds=int(run_time)))
@@ -787,3 +786,5 @@ def main(args):
 if __name__ == "__main__":
     args = parse_args()
     main(args)
+    import os
+    os._exit(0)  # workaround for the problem of rank 0 hanging very long (likely due to async_executor)
