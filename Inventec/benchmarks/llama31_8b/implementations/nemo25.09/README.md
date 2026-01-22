@@ -55,7 +55,7 @@ Step-by-step
    Set the directory for the data to be downloaded to.  Then download the dataset.  This takes a couple of hours.
 
    ```bash
-   export DATADIR=<path/to/dataset>
+   export DATADIR=${LLAMA31_8B_DATA_DIR}
    bash data_scripts/download_8b.sh
    ```
 
