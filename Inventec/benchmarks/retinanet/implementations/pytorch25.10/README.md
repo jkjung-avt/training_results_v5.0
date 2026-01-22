@@ -142,3 +142,4 @@ Known Issues
 ------------
 
 * `SLURM_MPI_TYPE`: `pmi2` seems be perform better than `pmix` in our experiments.
+* `BATCHSIZE=16` and `LR=0.00008` might sometimes produce better results (training might finish in 3 epochs instead of 4).  Note that BATCHSIZE is actually local_batch_size, global_batch_size = local_batch_size * ranks.
