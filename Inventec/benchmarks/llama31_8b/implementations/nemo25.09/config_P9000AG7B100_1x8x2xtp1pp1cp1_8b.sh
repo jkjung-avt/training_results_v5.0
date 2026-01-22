@@ -27,7 +27,7 @@ export DGXSYSTEM=$(basename $(readlink -f ${BASH_SOURCE[0]}) | sed 's/^config_//
 export WALLTIME_RUNANDTIME=220
 export WALLTIME=$((5 + ${NEXP:-1} * ($WALLTIME_RUNANDTIME + 5)))
 
-export PLATFORM_SRUN_OPTIONS='--export=ALL,UCX_NET_DEVICES="mlx5_0:1,mlx5_1:1,mlx5_2:1,mlx5_3:1,mlx5_10:1,mlx5_11:1,mlx5_12:1,mlx5_13:1"'
+export PLATFORM_SRUN_OPTIONS=--export=ALL,UCX_NET_DEVICES="mlx5_0:1,mlx5_1:1,mlx5_2:1,mlx5_3:1,mlx5_10:1,mlx5_11:1,mlx5_12:1,mlx5_13:1"
 
 # Inventec stuffs
 export MLPERF_SUBMITTER="Inventec Corporation"
